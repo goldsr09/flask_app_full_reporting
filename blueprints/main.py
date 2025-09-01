@@ -114,13 +114,13 @@ def query1():
                                 data = all_data
                                 search_method = f"New query (Seat ID: {seat_id}) - {len(data)} records"
                         else:
-                            search_method = "❌ No data returned from query"
+                            search_method = "No data returned from query"
                     except Exception as e:
-                        search_method = f"❌ Error: {str(e)}"
+                        search_method = f"Error: {str(e)}"
                         print(f"Query1 Error during tag search: {e}")
                         print(f"Query1 Error traceback: {traceback.format_exc()}")
                 else:
-                    search_method = "❌ Tag not found in cache. Please provide Seat ID to run new query."
+                    search_method = "Tag not found in cache. Please provide Seat ID to run new query."
                     print("Query1 Tag not found in cache and no seat_id provided")
         
         elif seat_id and seat_id.strip():
@@ -128,9 +128,9 @@ def query1():
             print(f"Query1 Searching by seat_id: {seat_id}")
             
             try:
-                print(f"🔄 Calling fetch_from_superset with parameters: {date_from}, {date_to}, {seat_id}")
+                print(f"Calling fetch_from_superset with parameters: {date_from}, {date_to}, {seat_id}")
                 columns, data = fetch_from_superset(date_from, date_to, seat_id)
-                print(f"✅ fetch_from_superset returned: {len(columns)} columns, {len(data)} rows")
+                print(f"fetch_from_superset returned: {len(columns)} columns, {len(data)} rows")
                 
                 if data:
                     # Check if data came from cache by looking for cache hit indicators
@@ -140,15 +140,15 @@ def query1():
                     search_method = f"{'Loaded from cache' if cache_hit else 'Fresh query'} (Seat ID: {seat_id}) - {len(data)} records"
                     print(f"Query1 {'Cache hit' if cache_hit else 'Fresh query'}: {len(data)} rows")
                 else:
-                    search_method = "❌ No data found for this Seat ID and date range"
+                    search_method = "No data found for this Seat ID and date range"
                     print(f"Query1 No data returned for seat_id {seat_id}")
                     
             except Exception as e:
-                search_method = f"❌ Error: {str(e)}"
+                search_method = f"Error: {str(e)}"
                 print(f"Query1 Error during seat_id search: {e}")
                 print(f"Query1 Error traceback: {traceback.format_exc()}")
         else:
-            search_method = "❌ Please provide either a tag name to search or a Seat ID"
+            search_method = "Please provide either a tag name to search or a Seat ID"
             print("Query1 No search criteria provided")
     
     else:
@@ -267,14 +267,14 @@ def query2():
                                 data = all_data
                                 search_method = f"New query (Publisher ID: {publisher_id}) - {len(data)} records"
                         else:
-                            search_method = "❌ No data returned from query"
+                            search_method = "No data returned from query"
                     except Exception as e:
                         error_message = f"Error fetching data: {str(e)}"
-                        search_method = f"❌ Error: {str(e)}"
+                        search_method = f"Error: {str(e)}"
                         print(f"Query2 Error: {e}")
                         print(f"Query2 Error traceback: {traceback.format_exc()}")
                 else:
-                    search_method = "❌ Tag not found in cache. Please provide Publisher ID to run new query."
+                    search_method = "Tag not found in cache. Please provide Publisher ID to run new query."
                     print("Query2 Tag not found in cache and no publisher_id provided")
         
         elif publisher_id and publisher_id.strip():
@@ -292,16 +292,16 @@ def query2():
                     search_method = f"{'Loaded from cache' if cache_hit else 'Fresh query'} (Publisher ID: {publisher_id}) - {len(data)} records"
                     print(f"Query2 {'Cache hit' if cache_hit else 'Fresh query'}: {len(data)} rows")
                 else:
-                    search_method = "❌ No data found for this Publisher ID and date range"
+                    search_method = "No data found for this Publisher ID and date range"
                     print(f"Query2 No data returned for publisher_id {publisher_id}")
                     
             except Exception as e:
                 error_message = f"Error fetching data: {str(e)}"
-                search_method = f"❌ Error: {str(e)}"
+                search_method = f"Error: {str(e)}"
                 print(f"Query2 Error: {e}")
                 print(f"Query2 Error traceback: {traceback.format_exc()}")
         else:
-            search_method = "❌ Please provide either a tag name to search or a Publisher ID"
+            search_method = "Please provide either a tag name to search or a Publisher ID"
             print("Query2 No search criteria provided")
     
     else:
@@ -413,15 +413,15 @@ def test():
         from utils.superset_utils import fetch_and_cache_yesterday_data
         missing_seat_ids = fetch_and_cache_yesterday_data()
         if missing_seat_ids is not None:
-            result.append("✅ Data collection completed successfully")
+            result.append("Data collection completed successfully")
             if len(missing_seat_ids) == 0:
-                result.append("📊 All data was already cached")
+                result.append("All data was already cached")
             else:
-                result.append(f"📊 Processed {len(missing_seat_ids)} missing seat IDs")
+                result.append(f"Processed {len(missing_seat_ids)} missing seat IDs")
         else:
-            result.append("❌ Data collection failed")
+            result.append("Data collection failed")
     except Exception as e:
-        result.append(f"❌ Data collection error: {str(e)}")
+        result.append(f"Data collection error: {str(e)}")
     
     result.append("\n" + "=" * 50)
     
