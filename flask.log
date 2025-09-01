@@ -1,0 +1,30 @@
+✅ Database initialized successfully
+✅ Blueprints registered successfully
+🕐 Scheduler started - auto-collection at 06:00 daily
+🚀 Auto-collection enabled - scheduled for 06:00 daily
+🌐 Starting Flask web server...
+ * Serving Flask app 'app'
+ * Debug mode: on
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5001
+Press CTRL+C to quit
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 311-314-893
+✅ Database initialized successfully
+✅ Blueprints registered successfully
+🕐 Scheduler started - auto-collection at 06:00 daily
+🚀 Auto-collection enabled - scheduled for 06:00 daily
+🌐 Starting Flask web server...
+Traceback (most recent call last):
+  File "/Users/rgoldstein/flask_analytics_app/app.py", line 103, in <module>
+    app.run(host='127.0.0.1', port=5001, debug=True)
+  File "/Users/rgoldstein/Library/Python/3.9/lib/python/site-packages/flask/app.py", line 662, in run
+    run_simple(t.cast(str, host), port, self, **options)
+  File "/Users/rgoldstein/Library/Python/3.9/lib/python/site-packages/werkzeug/serving.py", line 1115, in run_simple
+    run_with_reloader(
+  File "/Users/rgoldstein/Library/Python/3.9/lib/python/site-packages/werkzeug/_reloader.py", line 459, in run_with_reloader
+    ensure_echo_on()
+  File "/Users/rgoldstein/Library/Python/3.9/lib/python/site-packages/werkzeug/_reloader.py", line 439, in ensure_echo_on
+    termios.tcsetattr(sys.stdin, termios.TCSANOW, attributes)
+termios.error: (4, 'Interrupted system call')

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Query 1: Aggregate Metrics</title>
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css"/>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            padding: 40px;
+            backdrop-filter: blur(10px);
+        }
+        h2 {
+            margin-top: 0;
+            color: #2c3e50;
+            font-size: 2.2rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            border-left: 5px solid #667eea;
+        }
+        .form-section h3 {
+            margin: 0 0 20px 0;
+            color: #495057;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        form {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 150px;
+        }
+        label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+        input[type="date"],
+        input[type="text"] {
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        input[type="date"]:focus,
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        button[type="submit"] {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            height: fit-content;
+        }
+        button[type="submit"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .status-msg {
+            margin-bottom: 20px;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .status-cached {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status-fresh {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        table.dataTable {
+            width: 100% !important;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: white;
+            font-size: 0.9rem;
+        }
+        thead th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            padding: 15px 12px;
+            text-align: left;
+            border: none;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        thead th:first-child {
+            border-top-left-radius: 10px;
+        }
+        thead th:last-child {
+            border-top-right-radius: 10px;
+        }
+        tbody td {
+            padding: 12px;
+            border-bottom: 1px solid #f1f3f4;
+            vertical-align: middle;
+        }
+        tbody tr:hover {
+            background: #f8f9ff;
+        }
+        tbody tr:nth-child(even) {
+            background: #fafbfc;
+        }
+        tbody tr:nth-child(even):hover {
+            background: #f0f2ff;
+        }
+        .number-cell {
+            text-align: right;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-weight: 500;
+        }
+        .date-cell {
+            font-weight: 600;
+            color: #495057;
+        }
+        .tag-cell {
+            max-width: 400px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #6c757d;
+        }
+        .tag-name-cell {
+            max-width: 500px !important;
+            white-space: normal !important;
+            word-wrap: break-word !important;
+            color: #495057;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+        .clear-search {
+            display: inline-block;
+            margin-left: 15px;
+            padding: 8px 16px;
+            background: #f8f9fa;
+            color: #6c757d;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            border: 1px solid #dee2e6;
+            transition: all 0.2s ease;
+        }
+        .clear-search:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+        .nav-links {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .nav-links a {
+            display: inline-block;
+            margin: 0 10px;
+            padding: 10px 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        .nav-links a:hover {
+            background: rgba(0, 0, 0, 0.9);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        .nav-links a.active {
+            background: rgba(255, 255, 255, 0.95);
+            color: #667eea;
+            border-color: #667eea;
+        }
+        @media (max-width: 900px) {
+            .container { padding: 20px 15px; }
+            form { flex-direction: column; }
+            .form-group { min-width: 100%; }
+            .nav-links a { margin: 5px; padding: 8px 15px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-links">
+            <a href="/" class="active">📊 Query 1: Aggregate Metrics</a>
+            <a href="/query2">🎥 Query 2: Video Ad Analytics</a>
+            <a href="/trends">📈 Trends & Alerts</a>
+            <a href="/search">🔍 Tag Search</a>
+            <a href="/forecast">🎯 Forecast Tracking</a>
+        </div>
+        
+        <h2>📊 Query Analytics Dashboard</h2>
+        
+        <div class="form-section">
+            <h3>🔍 Load Data</h3>
+            <form method="POST">
+                <input type="hidden" name="action" value="load_data">
+                <div class="form-group">
+                    <label for="date_from">Date From:</label>
+                    <input type="date" name="date_from" value="{{ date_from or '2025-07-01' }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="date_to">Date To:</label>
+                    <input type="date" name="date_to" value="{{ date_to or '' }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="seat_id">Seat ID:</label>
+                    <input type="text" name="seat_id" value="{{ seat_id or '' }}" required>
+                </div>
+                <button type="submit">🚀 Load Data</button>
+            </form>
+        </div>
+        
+        <div class="form-section">
+            <h3>🔍 Smart Search</h3>
+            <form method="POST">
+                <div class="form-group">
+                    <label for="date_from">Date From:</label>
+                    <input type="date" name="date_from" value="{{ date_from or '2025-07-01' }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="date_to">Date To:</label>
+                    <input type="date" name="date_to" value="{{ date_to or '' }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="tag_search">🏷️ Search by Tag Name/ID:</label>
+                    <input type="text" 
+                           name="tag_search" 
+                           value="{{ tag_search or '' }}" 
+                           placeholder="e.g., 'Spotify', 'xumo', 'inventory'..."
+                           autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="seat_id">OR Seat ID:</label>
+                    <input type="text" 
+                           name="seat_id" 
+                           value="{{ seat_id or '' }}" 
+                           placeholder="Required if tag not in cache">
+                </div>
+                <button type="submit">🚀 Search</button>
+            </form>
+            <div style="margin-top: 15px; padding: 10px; background: #e7f3ff; border-radius: 5px; border-left: 3px solid #007bff;">
+                <small><strong>💡 How it works:</strong> 
+                Search by tag name first - if found in cache, you'll get instant results. 
+                If not found, provide Seat ID to run a new query.</small>
+            </div>
+        </div>
+        
+        {% if search_method %}
+            <div class="status-msg {{ 'status-cached' if cache_hit else 'status-fresh' }}">
+                {{ search_method }} | 📊 Showing {{ data|length }} records
+            </div>
+        {% endif %}
+        
+        {% if columns and data %}
+            <div class="form-section">
+                <h3>🔍 Filter Current Results</h3>
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <div class="form-group" style="flex-grow: 1;">
+                        <label for="live_search">Real-time Filter:</label>
+                        <input type="text" 
+                               id="live_search"
+                               placeholder="Type to filter current results instantly..."
+                               autocomplete="off"
+                               style="width: 100%;">
+                    </div>
+                    <button type="button" onclick="clearSearch()" style="background: #6c757d; margin-top: 20px;">✕ Clear</button>
+                </div>
+                <div id="search_stats" style="margin-top: 10px; color: #6c757d; font-size: 0.9rem;"></div>
+            </div>
+            
+            <div class="status-msg {{ 'status-cached' if cache_hit else 'status-fresh' }}">
+                {{ '✅ Loaded from cache!' if cache_hit else '🔄 Fresh query run and cached.' }}
+                | 📊 Showing <span id="row_count">{{ data|length }}</span> records
+            </div>
+            
+            <div class="table-container">
+                <table id="metrics-table" class="display dataTable">
+                    <thead>
+                        <tr>
+                            <!-- Date Key first -->
+                            {% if 'date_key' in columns %}
+                                <th>📅 Date</th>
+                            {% endif %}
+                            {% for col in columns %}
+                                {% if col != 'row_count' and col != 'date_key' and col != 'seat_id' and col != 'provider_channel_id' %}
+                                    {% set col_name = col.name if col is mapping else col %}
+                                    <th {% if col_name == "total_impressions" %}style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);"{% endif %}>
+                                        {% if col_name == 'tag_name' %}🏷️ 
+                                        {% elif col_name == 'tag_id' %}🔖 
+                                        {% elif 'total' in col_name %}📈 
+                                        {% elif 'rate' in col_name %}📊 
+                                        {% endif %}
+                                        {{ (col_name|string).replace('_', ' ').title() }}
+                                    </th>
+                                {% endif %}
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in data %}
+                            <tr>
+                            <!-- Date Key first -->
+                            {% if 'date_key' in columns %}
+                                {% set date_index = columns.index('date_key') %}
+                                <td class="date-cell">{{ row[date_index] }}</td>
+                            {% endif %}
+                            {% for val in row %}
+                                {% set col = columns[loop.index0] %}
+                                {% set col_name = col.name if col is mapping else col %}
+                                {% if col_name != "row_count" and col_name != "date_key" and col_name != "seat_id" and col_name != "provider_channel_id" %}
+                                    {% if col_name == "total_impressions" %}
+                                        <td class="number-cell" style="background: #fff3cd; font-weight: bold; color: #856404;">
+                                            {{ "{:,}".format(val|int) if val is not none and val|string|length > 0 else "" }}
+                                        </td>
+                                    {% elif "sum" in col_name or "total" in col_name %}
+                                        <td class="number-cell">
+                                            {{ "{:,}".format(val|int) if val is not none and val|string|length > 0 else "" }}
+                                        </td>
+                                    {% elif "rate" in col_name %}
+                                        <td class="number-cell">
+                                            {{ "{:,.2f}%".format(val|float) if val is not none and val|string|length > 0 else "" }}
+                                        </td>
+                                    {% elif col_name == 'tag_name' %}
+                                        <td class="tag-name-cell" title="{{ val }}">{{ val }}</td>
+                                    {% elif col_name == 'tag_id' %}
+                                        <td class="tag-cell" title="{{ val }}">{{ val }}</td>
+                                    {% else %}
+                                        <td>{{ val }}</td>
+                                    {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </div>
+    <!-- jQuery and DataTables JS -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            {% if columns and data %}
+            // Initialize DataTable only if we have data
+            var table = $('#metrics-table').DataTable({
+                "order": [[0, "desc"]], // Sort by date_key (first column) descending
+                "scrollX": true,
+                "paging": true,
+                "pageLength": 50,
+                "lengthMenu": [ [20, 50, 100, 200, -1], [20, 50, 100, 200, "All"] ],
+                "stateSave": true,
+                "language": {
+                    "lengthMenu": "Show _MENU_ records per page",
+                    "info": "Showing _START_ to _END_ of _TOTAL_ entries",
+                    "search": "Search all records:",
+                    "emptyTable": "No matching records found"
+                },
+                "columnDefs": [
+                    { "className": "number-cell", "targets": "_all" }
+                ],
+                "drawCallback": function(settings) {
+                    // Update row count when table is redrawn
+                    var info = this.api().page.info();
+                    $('#row_count').text(info.recordsDisplay);
+                    
+                    // Update search stats
+                    var searchTerm = $('#live_search').val();
+                    if (searchTerm.length > 0) {
+                        $('#search_stats').html(`🔍 Filtered by: "<strong>${searchTerm}</strong>" | Found ${info.recordsDisplay} of ${info.recordsTotal} records`);
+                    } else {
+                        $('#search_stats').html('');
+                    }
+                }
+            });
+            
+            // Real-time search functionality
+            $('#live_search').on('input', function() {
+                var searchTerm = $(this).val();
+                table.search(searchTerm).draw();
+            });
+            
+            // Global clear search function
+            window.clearSearch = function() {
+                $('#live_search').val('');
+                table.search('').draw();
+                $('#search_stats').html('');
+            };
+            
+            // Focus on search when data loads
+            $('#live_search').focus();
+            {% endif %}
+        });
+    </script>
+</body>
+</html>

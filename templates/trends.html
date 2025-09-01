@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trends & Alerts Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .nav-links {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-links a {
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+        
+        .nav-links a:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-1px);
+        }
+        
+        .nav-links a.active {
+            background: #667eea;
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            font-size: 2rem;
+            margin: 0;
+            font-weight: 700;
+        }
+        
+        /* Stats Overview */
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 24px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: transform 0.2s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #667eea;
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+        
+        .stat-label {
+            color: #6c757d;
+            font-size: 14px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Main Content */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        
+        .content-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #f1f3f4;
+        }
+        
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin: 0;
+        }
+        
+        .section-icon {
+            font-size: 1.5rem;
+            margin-right: 12px;
+        }
+        
+        /* Alerts */
+        .alert-item {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: transform 0.2s ease;
+        }
+        
+        .alert-item:hover {
+            transform: translateX(4px);
+        }
+        
+        .alert-high {
+            border-left-color: #dc3545;
+            background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
+        }
+        
+        .alert-medium {
+            border-left-color: #ffc107;
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        }
+        
+        .alert-low {
+            border-left-color: #17a2b8;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        }
+        
+        .alert-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        
+        .alert-message {
+            font-weight: 600;
+            font-size: 14px;
+            line-height: 1.4;
+            flex: 1;
+            margin-right: 12px;
+        }
+        
+        .alert-badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+        
+        .badge-increase {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-drop {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .badge-gap {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+        
+        .alert-details {
+            font-size: 13px;
+            color: #6c757d;
+            line-height: 1.5;
+        }
+        
+        .alert-details strong {
+            color: #495057;
+        }
+        
+        .change-value {
+            font-weight: 600;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+        
+        .change-positive {
+            color: #28a745;
+        }
+        
+        .change-negative {
+            color: #dc3545;
+        }
+        
+        /* Trends */
+        .trend-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: transform 0.2s ease;
+        }
+        
+        .trend-item:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .trend-info {
+            flex: 1;
+        }
+        
+        .trend-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: #2c3e50;
+            margin-bottom: 4px;
+        }
+        
+        .trend-meta {
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .trend-metrics {
+            text-align: right;
+        }
+        
+        .trend-change {
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+        
+        .trend-avg {
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        /* Configuration Section */
+        .config-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+        
+        .config-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid;
+        }
+        
+        .config-card.day-over-day {
+            border-left-color: #007bff;
+        }
+        
+        .config-card.week-over-week {
+            border-left-color: #28a745;
+        }
+        
+        .config-card.gap-tolerant {
+            border-left-color: #ffc107;
+        }
+        
+        .config-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .config-icon {
+            margin-right: 8px;
+            font-size: 16px;
+        }
+        
+        .config-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .config-list li {
+            font-size: 13px;
+            color: #6c757d;
+            margin-bottom: 6px;
+            padding-left: 16px;
+            position: relative;
+        }
+        
+        .config-list li:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+        }
+        
+        /* Empty States */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+        
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        
+        .empty-state-text {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        
+        .empty-state-subtext {
+            font-size: 14px;
+            opacity: 0.7;
+        }
+        
+        /* Refresh Button */
+        .refresh-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            z-index: 1000;
+        }
+        
+        .refresh-button:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+        }
+        
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-overview {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .nav-links {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .stats-overview {
+                grid-template-columns: 1fr;
+            }
+            
+            .config-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="refresh-button" onclick="window.location.reload()">🔄 Refresh</button>
+    
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="nav-links">
+                <a href="/">📊 Query 1</a>
+                <a href="/query2">🎥 Query 2</a>
+                <a href="/trends" class="active">📈 Trends & Alerts</a>
+                <a href="/search">🔍 Search</a>
+            </div>
+            <h1>📈 Trends & Alerts Dashboard</h1>
+        </div>
+        
+        <!-- Stats Overview -->
+        <div class="stats-overview">
+            <div class="stat-card">
+                <div class="stat-number">{{ alerts|length }}</div>
+                <div class="stat-label">Total Alerts</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ alerts|selectattr('severity', 'equalto', 'high')|list|length }}</div>
+                <div class="stat-label">High Priority</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ alerts|selectattr('alert_type', 'equalto', 'week_over_week')|list|length }}</div>
+                <div class="stat-label">Week-over-Week Drops</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ alerts|selectattr('alert_type', 'equalto', 'week_over_week_increase')|list|length }}</div>
+                <div class="stat-label">Week-over-Week Increases</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ alerts|selectattr('alert_type', 'equalto', 'gap_tolerant')|list|length }}</div>
+                <div class="stat-label">Gap-Tolerant</div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Active Alerts -->
+            <div class="content-section">
+                <div class="section-header">
+                    <div class="section-icon">🚨</div>
+                    <h2 class="section-title">Active Alerts</h2>
+                </div>
+                
+                {% if alerts %}
+                    {% for alert in alerts %}
+                        <div class="alert-item alert-{{ alert.severity }}">
+                            <div class="alert-header">
+                                <div class="alert-message">
+                                    {{ alert.message }}
+                                </div>
+                                <div class="alert-badge 
+                                    {% if alert.alert_type == 'week_over_week_increase' %}badge-increase
+                                    {% elif alert.alert_type == 'week_over_week' %}badge-drop
+                                    {% elif alert.alert_type == 'gap_tolerant' %}badge-gap
+                                    {% else %}badge-drop{% endif %}">
+                                    {% if alert.alert_type == 'day_over_day' %}
+                                        📅 Day-over-Day
+                                    {% elif alert.alert_type == 'week_over_week' %}
+                                        📊 Week-over-Week
+                                    {% elif alert.alert_type == 'week_over_week_increase' %}
+                                        📈 Week-over-Week Increase
+                                    {% elif alert.alert_type == 'gap_tolerant' %}
+                                        🔗 Gap-Tolerant ({{ alert.days_gap }}d)
+                                    {% else %}
+                                        📈 Standard
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="alert-details">
+                                <strong>Tag:</strong> {{ alert.tag_name }}<br>
+                                <strong>Change:</strong> {{ "{:,}".format(alert.previous_value|int) }} → {{ "{:,}".format(alert.current_value|int) }} 
+                                (<span class="change-value {% if alert.change_percent > 0 %}change-positive{% else %}change-negative{% endif %}">{{ "%.1f"|format(alert.change_percent) }}%</span>)<br>
+                                <strong>Date:</strong> {{ alert.date }}
+                                {% if alert.comparison_date %}
+                                    <br><strong>Compared to:</strong> {{ alert.comparison_date }}
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-state-icon">✅</div>
+                        <div class="empty-state-text">No active alerts</div>
+                        <div class="empty-state-subtext">All metrics are within normal ranges</div>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- 7-Day Trends -->
+            <div class="content-section">
+                <div class="section-header">
+                    <div class="section-icon">📊</div>
+                    <h2 class="section-title">7-Day Trends</h2>
+                </div>
+                
+                {% if trends %}
+                    {% for trend_key, trend in trends.items() %}
+                        <div class="trend-item trend-{{ trend.trend_direction }}">
+                            <div class="trend-info">
+                                <div class="trend-name">{{ trend.tag_name }}</div>
+                                <div class="trend-meta">ID: {{ trend.tag_id[:8] }}... | {{ trend.metric.replace('_', ' ').title() }}</div>
+                            </div>
+                            <div class="trend-metrics">
+                                <div class="trend-change">
+                                    {% if trend.trend_direction == 'up' %}
+                                        <span class="change-positive">↗ +{{ "%.1f"|format(trend.trend_change_percent) }}%</span>
+                                    {% elif trend.trend_direction == 'down' %}
+                                        <span class="change-negative">↘ {{ "%.1f"|format(trend.trend_change_percent) }}%</span>
+                                    {% else %}
+                                        <span class="change-value">→ {{ "%.1f"|format(trend.trend_change_percent) }}%</span>
+                                    {% endif %}
+                                </div>
+                                <div class="trend-avg">
+                                    {{ "{:,.0f}".format(trend.current_7day_avg) }} avg
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📊</div>
+                        <div class="empty-state-text">No trend data available</div>
+                        <div class="empty-state-subtext">Need at least 7 days of data for trend analysis</div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Configuration -->
+        <div class="config-section">
+            <div class="section-header">
+                <div class="section-icon">⚙️</div>
+                <h2 class="section-title">Alert Configuration</h2>
+            </div>
+            
+            <div class="config-grid">
+                <div class="config-card day-over-day">
+                    <div class="config-title">
+                        <div class="config-icon">📅</div>
+                        Day-over-Day
+                    </div>
+                    <ul class="config-list">
+                        <li>Compares consecutive calendar days</li>
+                        <li>Drop threshold: ≥35%</li>
+                        <li>Requires >2,500 impressions</li>
+                    </ul>
+                </div>
+                
+                <div class="config-card week-over-week">
+                    <div class="config-title">
+                        <div class="config-icon">📊</div>
+                        Week-over-Week
+                    </div>
+                    <ul class="config-list">
+                        <li>Compares cumulative weekly totals</li>
+                        <li>Drop threshold: ≥20%</li>
+                        <li>Increase threshold: ≥25%</li>
+                        <li>Catches sustained weekly trends</li>
+                    </ul>
+                </div>
+                
+                <div class="config-card gap-tolerant">
+                    <div class="config-title">
+                        <div class="config-icon">🔗</div>
+                        Gap-Tolerant
+                    </div>
+                    <ul class="config-list">
+                        <li>Handles missing data gaps</li>
+                        <li>Compares vs 1-3 days ago</li>
+                        <li>Drop threshold: ≥28% (80% of normal)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Advanced Analytics -->
+        <div class="config-section">
+            <div class="section-header">
+                <div class="section-icon">📈</div>
+                <h2 class="section-title">Advanced Analytics</h2>
+            </div>
+            
+            <div class="analytics-grid">
+                <div class="analytics-card">
+                    <div class="analytics-title">Alert Trends (30 Days)</div>
+                    <div class="analytics-content">
+                        <div id="alertTrendsChart" style="height: 200px; background: #f8f9fa; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #6c757d;">
+                            Loading chart...
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="analytics-card">
+                    <div class="analytics-title">Most Affected Tags</div>
+                    <div class="analytics-content">
+                        <div id="affectedTagsList" style="max-height: 200px; overflow-y: auto;">
+                            <div style="text-align: center; color: #6c757d; padding: 20px;">
+                                Loading data...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="analytics-card">
+                    <div class="analytics-title">Alert Distribution</div>
+                    <div class="analytics-content">
+                        <div id="alertDistributionChart" style="height: 200px; background: #f8f9fa; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #6c757d;">
+                            Loading chart...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notification Management -->
+        <div class="config-section">
+            <div class="section-header">
+                <div class="section-icon">🔔</div>
+                <h2 class="section-title">Notification Settings</h2>
+            </div>
+            
+            <div class="notification-grid">
+                <div class="notification-card">
+                    <div class="notification-title">Email Notifications</div>
+                    <div class="notification-content">
+                        <p><strong>Status:</strong> <span id="emailStatus">Not configured</span></p>
+                        <p><strong>Recipients:</strong> <span id="emailRecipients">None</span></p>
+                        <button class="config-button" onclick="testNotification('email')">Test Email</button>
+                    </div>
+                </div>
+                
+                <div class="notification-card">
+                    <div class="notification-title">Slack Notifications</div>
+                    <div class="notification-content">
+                        <p><strong>Status:</strong> <span id="slackStatus">Not configured</span></p>
+                        <p><strong>Channel:</strong> <span id="slackChannel">#alerts</span></p>
+                        <button class="config-button" onclick="testNotification('slack')">Test Slack</button>
+                    </div>
+                </div>
+                
+                <div class="notification-card">
+                    <div class="notification-title">Webhook Notifications</div>
+                    <div class="notification-content">
+                        <p><strong>Status:</strong> <span id="webhookStatus">Not configured</span></p>
+                        <p><strong>Endpoint:</strong> <span id="webhookUrl">None</span></p>
+                        <button class="config-button" onclick="testNotification('webhook')">Test Webhook</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+        }
+        
+        .analytics-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .analytics-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 12px;
+            color: #2c3e50;
+        }
+        
+        .analytics-content {
+            font-size: 13px;
+        }
+        
+        .notification-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+        
+        .notification-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .notification-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 12px;
+            color: #2c3e50;
+        }
+        
+        .notification-content p {
+            margin: 8px 0;
+            font-size: 13px;
+        }
+        
+        .config-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: background 0.2s ease;
+        }
+        
+        .config-button:hover {
+            background: #5a6fd8;
+        }
+        
+        .affected-tag-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f3f4;
+        }
+        
+        .affected-tag-item:last-child {
+            border-bottom: none;
+        }
+        
+        .tag-name {
+            font-weight: 500;
+            font-size: 13px;
+        }
+        
+        .tag-count {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+    </style>
+    
+    <script>
+        // Load analytics data
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAlertAnalytics();
+            loadNotificationStatus();
+        });
+        
+        function loadAlertAnalytics() {
+            fetch('/api/alerts/analytics?days=30')
+                .then(response => response.json())
+                .then(data => {
+                    updateAlertTrends(data);
+                    updateAffectedTags(data);
+                    updateAlertDistribution(data);
+                })
+                .catch(error => {
+                    console.error('Error loading analytics:', error);
+                });
+        }
+        
+        function updateAlertTrends(data) {
+            const chartContainer = document.getElementById('alertTrendsChart');
+            if (data.daily_trend && Object.keys(data.daily_trend).length > 0) {
+                const dates = Object.keys(data.daily_trend).sort();
+                const counts = dates.map(date => data.daily_trend[date]);
+                
+                chartContainer.innerHTML = `
+                    <div style="padding: 20px;">
+                        <div style="font-weight: 600; margin-bottom: 10px;">Daily Alert Count</div>
+                        <div style="display: flex; align-items: end; height: 120px; gap: 4px;">
+                            ${counts.map((count, i) => `
+                                <div style="flex: 1; background: #667eea; height: ${Math.max(10, (count / Math.max(...counts)) * 100)}%; border-radius: 2px; position: relative;">
+                                    <div style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #6c757d;">
+                                        ${dates[i].split('-')[2]}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                chartContainer.innerHTML = '<div style="text-align: center; color: #6c757d;">No trend data available</div>';
+            }
+        }
+        
+        function updateAffectedTags(data) {
+            const container = document.getElementById('affectedTagsList');
+            if (data.most_affected_tags && data.most_affected_tags.length > 0) {
+                container.innerHTML = data.most_affected_tags.map(([tag_id, count]) => `
+                    <div class="affected-tag-item">
+                        <div class="tag-name">${tag_id.substring(0, 12)}...</div>
+                        <div class="tag-count">${count}</div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<div style="text-align: center; color: #6c757d;">No affected tags data</div>';
+            }
+        }
+        
+        function updateAlertDistribution(data) {
+            const chartContainer = document.getElementById('alertDistributionChart');
+            if (data.alerts_by_type && Object.keys(data.alerts_by_type).length > 0) {
+                const types = Object.keys(data.alerts_by_type);
+                const counts = types.map(type => data.alerts_by_type[type]);
+                const total = counts.reduce((sum, count) => sum + count, 0);
+                
+                chartContainer.innerHTML = `
+                    <div style="padding: 20px;">
+                        <div style="font-weight: 600; margin-bottom: 10px;">Alert Types</div>
+                        ${types.map((type, i) => {
+                            const percentage = total > 0 ? (counts[i] / total * 100).toFixed(1) : 0;
+                            return `
+                                <div style="margin-bottom: 8px;">
+                                    <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                                        <span>${type.replace(/_/g, ' ').toUpperCase()}</span>
+                                        <span>${counts[i]} (${percentage}%)</span>
+                                    </div>
+                                    <div style="background: #e9ecef; height: 6px; border-radius: 3px;">
+                                        <div style="background: #667eea; height: 100%; width: ${percentage}%; border-radius: 3px;"></div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            } else {
+                chartContainer.innerHTML = '<div style="text-align: center; color: #6c757d;">No distribution data available</div>';
+            }
+        }
+        
+        function loadNotificationStatus() {
+            // This would check environment variables or config
+            document.getElementById('emailStatus').textContent = 'Configured';
+            document.getElementById('emailRecipients').textContent = 'admin@example.com';
+            document.getElementById('slackStatus').textContent = 'Configured';
+            document.getElementById('webhookStatus').textContent = 'Not configured';
+        }
+        
+        function testNotification(type) {
+            fetch(`/api/alerts/test-notification?types=${type}`)
+                .then(response => response.json())
+                .then(data => {
+                    alert(`${type.toUpperCase()} notification test completed. Check console for details.`);
+                    console.log('Test results:', data);
+                })
+                .catch(error => {
+                    alert(`Failed to test ${type} notification: ${error.message}`);
+                });
+        }
+        
+        // Auto-refresh analytics every 5 minutes
+        setInterval(loadAlertAnalytics, 300000);
+    </script>
+</body>
+</html>

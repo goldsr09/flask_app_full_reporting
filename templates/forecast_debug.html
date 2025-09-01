@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forecast Tag Mapping Debug</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .nav-links {
+            background: rgba(0, 0, 0, 0.1);
+            padding: 15px 30px;
+            text-align: center;
+        }
+        
+        .nav-links a {
+            display: inline-block;
+            margin: 0 10px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-links a:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .nav-links a.active {
+            background: rgba(255, 255, 255, 0.3);
+            font-weight: 700;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .publisher-section {
+            background: white;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .publisher-header {
+            background: linear-gradient(135deg, #495057 0%, #6c757d 100%);
+            color: white;
+            padding: 20px;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .publisher-content {
+            padding: 20px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-card h4 {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+        
+        .stat-card .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        
+        .country-breakdown {
+            margin-top: 20px;
+        }
+        
+        .country-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .country-item h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        
+        .tag-badge {
+            background: #007bff;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+        
+        .unmapped-section {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .unmapped-section h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .unmapped-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        
+        .unmapped-tag {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+        
+        .coverage-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .coverage-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            transition: width 0.3s ease;
+        }
+        
+        .coverage-fill.low {
+            background: linear-gradient(90deg, #dc3545, #fd7e14);
+        }
+        
+        .coverage-fill.medium {
+            background: linear-gradient(90deg, #ffc107, #fd7e14);
+        }
+        
+        @media (max-width: 768px) {
+            .container { margin: 10px; }
+            .header h1 { font-size: 2rem; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .content { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Forecast Tag Mapping Debug</h1>
+            <p>Analyzing tag-to-country mapping for forecasting</p>
+        </div>
+        
+        <div class="nav-links">
+            <a href="/">📊 Query 1</a>
+            <a href="/query2">🎥 Query 2</a>
+            <a href="/trends">📈 Trends</a>
+            <a href="/search">🔍 Search</a>
+            <a href="/forecast">🎯 Forecast</a>
+            <a href="/forecast/debug" class="active">🔧 Debug</a>
+        </div>
+        
+        <div class="content">
+            {% if mapping_analysis %}
+                {% for publisher_id, analysis in mapping_analysis.items() %}
+                    <div class="publisher-section">
+                        <div class="publisher-header">
+                            📊 Publisher ID: {{ publisher_id }}
+                        </div>
+                        <div class="publisher-content">
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <h4>Total Tags</h4>
+                                    <div class="value">{{ analysis.total_tags }}</div>
+                                </div>
+                                <div class="stat-card">
+                                    <h4>Mapped Tags</h4>
+                                    <div class="value">{{ analysis.mapped_tags }}</div>
+                                </div>
+                                <div class="stat-card">
+                                    <h4>Unmapped Tags</h4>
+                                    <div class="value">{{ analysis.unmapped_tags }}</div>
+                                </div>
+                                <div class="stat-card">
+                                    <h4>Mapping Coverage</h4>
+                                    <div class="value">{{ "%.1f"|format(analysis.mapping_coverage) }}%</div>
+                                    <div class="coverage-bar">
+                                        <div class="coverage-fill {% if analysis.mapping_coverage < 50 %}low{% elif analysis.mapping_coverage < 80 %}medium{% endif %}" 
+                                             style="width: {{ analysis.mapping_coverage }}%"></div>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <h4>Total Impressions</h4>
+                                    <div class="value">{{ "{:,}".format(analysis.total_impressions) }}</div>
+                                </div>
+                                <div class="stat-card">
+                                    <h4>Mapped Impressions</h4>
+                                    <div class="value">{{ "{:,}".format(analysis.mapped_impressions) }}</div>
+                                </div>
+                            </div>
+                            
+                            {% if analysis.country_breakdown %}
+                                <div class="country-breakdown">
+                                    <h3>🌍 Country Breakdown</h3>
+                                    {% for country, stats in analysis.country_breakdown.items() %}
+                                        <div class="country-item">
+                                            <h4>{{ country }} - {{ "{:,}".format(stats.total_impressions) }} impressions</h4>
+                                            <div class="tag-list">
+                                                {% for tag in stats.tags %}
+                                                    <span class="tag-badge">{{ tag }}</span>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            
+                            {% if analysis.unmapped_tag_list %}
+                                <div class="unmapped-section">
+                                    <h4>⚠️ Unmapped Tags ({{ analysis.unmapped_tag_list|length }})</h4>
+                                    <p>These tags could not be mapped to a country and will be excluded from geo-specific forecasts:</p>
+                                    <div class="unmapped-tags">
+                                        {% for tag in analysis.unmapped_tag_list %}
+                                            <span class="unmapped-tag">{{ tag }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="publisher-section">
+                    <div class="publisher-header">
+                        ⚠️ No Data Available
+                    </div>
+                    <div class="publisher-content">
+                        <p>No cached publisher data found. Please run some queries first to populate the cache.</p>
+                    </div>
+                </div>
+            {% endif %}
+            
+            {% if cached_publishers %}
+                <div class="publisher-section">
+                    <div class="publisher-header">
+                        📦 Cached Publishers
+                    </div>
+                    <div class="publisher-content">
+                        <p>Available publisher IDs in cache:</p>
+                        <div class="tag-list">
+                            {% for publisher_id in cached_publishers %}
+                                <span class="tag-badge">{{ publisher_id }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
+

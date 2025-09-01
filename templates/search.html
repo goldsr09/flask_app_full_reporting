@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tag Search</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            padding: 40px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            color: #2c3e50;
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .nav-links {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .nav-links a {
+            display: inline-block;
+            margin: 0 10px;
+            padding: 10px 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        .nav-links a:hover {
+            background: rgba(0, 0, 0, 0.9);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        .nav-links a.active {
+            background: rgba(255, 255, 255, 0.95);
+            color: #667eea;
+            border-color: #667eea;
+        }
+        .search-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .search-input {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 1.2rem;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .search-status {
+            margin-top: 15px;
+            padding: 10px 15px;
+            background: #e7f3ff;
+            border-radius: 8px;
+            color: #0c5460;
+            font-size: 0.9rem;
+        }
+        .results-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .tag-result {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+        .tag-result:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+        .tag-info {
+            flex-grow: 1;
+        }
+        .tag-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        .tag-details {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .tag-source {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 15px;
+        }
+        .source-query1 {
+            background: #d4edda;
+            color: #155724;
+        }
+        .source-query2 {
+            background: #cce7ff;
+            color: #004085;
+        }
+        .no-results {
+            text-align: center;
+            color: #6c757d;
+            padding: 60px 20px;
+            font-size: 1.1rem;
+        }
+        .loading {
+            text-align: center;
+            color: #667eea;
+            padding: 20px;
+            font-style: italic;
+        }
+        .highlight {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-links">
+            <a href="/">📊 Query 1: Aggregate Metrics</a>
+            <a href="/query2">🎥 Query 2: Video Ad Analytics</a>
+            <a href="/trends">📈 Trends & Alerts</a>
+            <a href="/search" class="active">🔍 Tag Search</a>
+        </div>
+        
+        <h1>🔍 Tag Search</h1>
+        
+        <div class="search-section">
+            <input type="text" 
+                   id="searchInput" 
+                   class="search-input" 
+                   placeholder="Start typing to search tags by name..." 
+                   autocomplete="off">
+            <div id="searchStatus" class="search-status" style="display: none;"></div>
+        </div>
+        
+        <div id="statsSection" class="stats" style="display: none;">
+            <div class="stat-card">
+                <div id="totalTags" class="stat-number">-</div>
+                <div class="stat-label">Total Tags Found</div>
+            </div>
+            <div class="stat-card">
+                <div id="query1Tags" class="stat-number">-</div>
+                <div class="stat-label">Query 1 Tags</div>
+            </div>
+            <div class="stat-card">
+                <div id="query2Tags" class="stat-number">-</div>
+                <div class="stat-label">Query 2 Tags</div>
+            </div>
+        </div>
+        
+        <div class="results-section">
+            <div id="searchResults">
+                <div class="no-results">
+                    🔍 Enter at least 2 characters to search for tags<br>
+                    <small>Search will look through all cached data from both Query 1 and Query 2</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let searchTimeout;
+        const searchInput = document.getElementById('searchInput');
+        const searchResults = document.getElementById('searchResults');
+        const searchStatus = document.getElementById('searchStatus');
+        const statsSection = document.getElementById('statsSection');
+        
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const query = this.value.trim();
+            
+            if (query.length < 2) {
+                searchResults.innerHTML = `
+                    <div class="no-results">
+                        🔍 Enter at least 2 characters to search for tags<br>
+                        <small>Search will look through all cached data from both Query 1 and Query 2</small>
+                    </div>`;
+                searchStatus.style.display = 'none';
+                statsSection.style.display = 'none';
+                return;
+            }
+            
+            // Show loading
+            searchResults.innerHTML = '<div class="loading">🔄 Searching...</div>';
+            searchStatus.style.display = 'none';
+            
+            // Debounce the search
+            searchTimeout = setTimeout(() => {
+                fetch(`/api/search-tags?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        displayResults(data, query);
+                    })
+                    .catch(error => {
+                        searchResults.innerHTML = '<div class="no-results">❌ Error searching tags</div>';
+                        console.error('Search error:', error);
+                    });
+            }, 300);
+        });
+        
+        function displayResults(data, query) {
+            const tags = data.tags || [];
+            
+            // Update status
+            searchStatus.textContent = data.message || '';
+            searchStatus.style.display = 'block';
+            
+            // Update stats
+            if (tags.length > 0) {
+                const query1Count = tags.filter(tag => tag.source === 'Query 1').length;
+                const query2Count = tags.filter(tag => tag.source === 'Query 2').length;
+                
+                document.getElementById('totalTags').textContent = tags.length;
+                document.getElementById('query1Tags').textContent = query1Count;
+                document.getElementById('query2Tags').textContent = query2Count;
+                statsSection.style.display = 'grid';
+            } else {
+                statsSection.style.display = 'none';
+            }
+            
+            if (tags.length === 0) {
+                searchResults.innerHTML = `
+                    <div class="no-results">
+                        😔 No tags found matching "${query}"<br>
+                        <small>Try a different search term or make sure data has been loaded in Query 1 or Query 2</small>
+                    </div>`;
+                return;
+            }
+            
+            // Display results
+            let resultsHTML = '';
+            tags.forEach(tag => {
+                // Highlight search term in tag name
+                const highlightedName = tag.tag_name.replace(
+                    new RegExp(`(${escapeRegex(query)})`, 'gi'), 
+                    '<span class="highlight">$1</span>'
+                );
+                
+                resultsHTML += `
+                    <div class="tag-result">
+                        <div class="tag-info">
+                            <div class="tag-name">${highlightedName}</div>
+                            <div class="tag-details">
+                                ID: ${tag.tag_id} | 
+                                ${tag.source === 'Query 1' ? 'Seat ID' : 'Publisher ID'}: ${tag.parent_id} | 
+                                Cache: ${tag.cache_key}
+                            </div>
+                        </div>
+                        <div class="tag-source source-${tag.source.toLowerCase().replace(' ', '')}">
+                            ${tag.source}
+                        </div>
+                    </div>`;
+            });
+            
+            searchResults.innerHTML = resultsHTML;
+        }
+        
+        function escapeRegex(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+        
+        // Focus on search input when page loads
+        searchInput.focus();
+    </script>
+</body>
+</html>
