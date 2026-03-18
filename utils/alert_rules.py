@@ -18,7 +18,7 @@ class AlertRules:
                 "week_over_week_drop": 20,
                 "week_over_week_increase": 25,
                 "gap_tolerant_drop": 28,
-                "minimum_impressions": 2500
+                "minimum_deliveries": 2500
             },
             "tag_specific_rules": {},
             "time_based_rules": {

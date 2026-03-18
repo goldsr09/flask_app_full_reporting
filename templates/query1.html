@@ -244,7 +244,7 @@
                 <input type="hidden" name="action" value="load_data">
                 <div class="form-group">
                     <label for="date_from">Date From:</label>
-                    <input type="date" name="date_from" value="{{ date_from or '2025-07-01' }}" required>
+                    <input type="date" name="date_from" value="{{ date_from or '2025-01-01' }}" required>
                 </div>
                 <div class="form-group">
                     <label for="date_to">Date To:</label>
@@ -263,7 +263,7 @@
             <form method="POST">
                 <div class="form-group">
                     <label for="date_from">Date From:</label>
-                    <input type="date" name="date_from" value="{{ date_from or '2025-07-01' }}" required>
+                    <input type="date" name="date_from" value="{{ date_from or '2025-01-01' }}" required>
                 </div>
                 <div class="form-group">
                     <label for="date_to">Date To:</label>
@@ -274,7 +274,7 @@
                     <input type="text" 
                            name="tag_search" 
                            value="{{ tag_search or '' }}" 
-                           placeholder="e.g., 'Spotify', 'xumo', 'inventory'..."
+                           placeholder="e.g., 'Acme', 'Widget', 'inventory'..."
                            autocomplete="off">
                 </div>
                 <div class="form-group">
@@ -330,9 +330,9 @@
                                 <th>📅 Date</th>
                             {% endif %}
                             {% for col in columns %}
-                                {% if col != 'row_count' and col != 'date_key' and col != 'seat_id' and col != 'provider_channel_id' %}
+                                {% if col != 'row_count' and col != 'date_key' and col != 'seat_id' and col != 'channel_id' %}
                                     {% set col_name = col.name if col is mapping else col %}
-                                    <th {% if col_name == "total_impressions" %}style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);"{% endif %}>
+                                    <th {% if col_name == "total_deliveries" %}style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);"{% endif %}>
                                         {% if col_name == 'tag_name' %}🏷️ 
                                         {% elif col_name == 'tag_id' %}🔖 
                                         {% elif 'total' in col_name %}📈 
@@ -355,8 +355,8 @@
                             {% for val in row %}
                                 {% set col = columns[loop.index0] %}
                                 {% set col_name = col.name if col is mapping else col %}
-                                {% if col_name != "row_count" and col_name != "date_key" and col_name != "seat_id" and col_name != "provider_channel_id" %}
-                                    {% if col_name == "total_impressions" %}
+                                {% if col_name != "row_count" and col_name != "date_key" and col_name != "seat_id" and col_name != "channel_id" %}
+                                    {% if col_name == "total_deliveries" %}
                                         <td class="number-cell" style="background: #fff3cd; font-weight: bold; color: #856404;">
                                             {{ "{:,}".format(val|int) if val is not none and val|string|length > 0 else "" }}
                                         </td>

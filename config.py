@@ -14,14 +14,14 @@ LOOKBACK_DAYS = 7  # How many days back to collect automatically
 
 # Known IDs for auto-collection (can be updated dynamically)
 KNOWN_SEAT_IDS = [
-    '0011600001nYnDu',
-    '00116000020nI8D',
+    'EXAMPLE_SEAT_ID_1',
+    'EXAMPLE_SEAT_ID_2',
     # Add more Seat IDs as discovered
 ]
 
 KNOWN_PUBLISHER_IDS = [
-    '58',
-    '245',
+    '100',
+    '200',
     # Add more Publisher IDs as discovered
 ]
 
@@ -54,7 +54,7 @@ ALERT_CONFIG = {
         'week_over_week_drop': 20,
         'week_over_week_increase': 25,
         'gap_tolerant_drop': 28,
-        'minimum_impressions': 2500
+        'minimum_deliveries': 2500
     },
     'notification_rules': {
         'high_priority_always_notify': True,

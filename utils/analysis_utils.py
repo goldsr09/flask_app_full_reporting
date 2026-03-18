@@ -3,14 +3,14 @@
 
 from datetime import datetime, timedelta
 
-def analyze_trends_and_alerts(daily_data, columns, impression_cols=None, tag_id=None, tag_info=None):
+def analyze_trends_and_alerts(daily_data, columns, metric_cols=None, tag_id=None, tag_info=None):
     """
     Analyze trends and generate alerts from daily data
     
     Args:
         daily_data: List of rows from cache
         columns: Column names list
-        impression_cols: List of impression column names to analyze
+        metric_cols: List of metric column names to analyze
         tag_id: Tag ID for this analysis
         tag_info: Dictionary with tag information (name, etc.)
     
@@ -21,16 +21,16 @@ def analyze_trends_and_alerts(daily_data, columns, impression_cols=None, tag_id=
     alerts = []
     trends = {}
     
-    # Default impression columns if not provided
-    if impression_cols is None:
-        impression_cols = [
-            'total_impressions',
-            'total_ad_query_requests',
-            'total_ad_query_responses',
-            'total_ad_slot_requests',
-            'total_ad_slot_responses',
-            'total_ad_creative_fetches',
-            'total_ad_creative_responses'
+    # Default metric columns if not provided
+    if metric_cols is None:
+        metric_cols = [
+            'total_deliveries',
+            'total_type_a_requests',
+            'total_type_a_responses',
+            'total_type_b_requests',
+            'total_type_b_responses',
+            'total_type_c_fetches',
+            'total_type_c_responses'
         ]
     
     # Default tag_info if not provided
@@ -39,7 +39,7 @@ def analyze_trends_and_alerts(daily_data, columns, impression_cols=None, tag_id=
     
     # Calculate trends (7-day moving average if we have enough data, excluding today)
     if len(daily_data) >= 7:
-        for col in impression_cols:
+        for col in metric_cols:
             if col in columns:
                 col_index = columns.index(col)
                 values = [row[col_index] or 0 for row in daily_data[-7:]]
@@ -65,9 +65,9 @@ def analyze_trends_and_alerts(daily_data, columns, impression_cols=None, tag_id=
 
     return alerts, trends
 
-def generate_impression_alerts(daily_data, columns, threshold_percent=35):
+def generate_delivery_alerts(daily_data, columns, threshold_percent=35):
     """
-    Generate alerts for significant drops in impression metrics
+    Generate alerts for significant drops in delivery metrics
     
     Args:
         daily_data: List of rows sorted by date (newest first)
@@ -87,7 +87,7 @@ def generate_impression_alerts(daily_data, columns, threshold_percent=35):
         date_key_index = columns.index('date_key')
         tag_id_index = columns.index('tag_id')
         tag_name_index = columns.index('tag_name') if 'tag_name' in columns else None
-        impressions_index = columns.index('total_impressions') if 'total_impressions' in columns else None
+        deliveries_index = columns.index('total_deliveries') if 'total_deliveries' in columns else None
     except ValueError:
         return alerts
     
@@ -118,14 +118,14 @@ def generate_impression_alerts(daily_data, columns, threshold_percent=35):
         current_day = tag_data[0]  # Most recent day for this tag
         previous_day = tag_data[1]  # Previous day for this tag
         
-        if impressions_index is not None:
-            current_impressions = current_day[impressions_index] or 0
-            previous_impressions = previous_day[impressions_index] or 0
+        if deliveries_index is not None:
+            current_deliveries = current_day[deliveries_index] or 0
+            previous_deliveries = previous_day[deliveries_index] or 0
             
             # Only alert if previous day had meaningful traffic
-            if previous_impressions > 2500:
-                if current_impressions < previous_impressions:
-                    drop_percent = ((previous_impressions - current_impressions) / previous_impressions) * 100
+            if previous_deliveries > 2500:
+                if current_deliveries < previous_deliveries:
+                    drop_percent = ((previous_deliveries - current_deliveries) / previous_deliveries) * 100
                     
                     if drop_percent >= threshold_percent:
                         # Get the best available tag name
@@ -139,13 +139,13 @@ def generate_impression_alerts(daily_data, columns, threshold_percent=35):
                         alert = {
                             'tag_id': current_day[tag_id_index],
                             'tag_name': alert_tag_name,
-                            'metric': 'total_impressions',
+                            'metric': 'total_deliveries',
                             'date': current_day[date_key_index],
-                            'current_value': current_impressions,
-                            'previous_value': previous_impressions,
+                            'current_value': current_deliveries,
+                            'previous_value': previous_deliveries,
                             'change_percent': -drop_percent,  # Negative for drop
                             'severity': 'high' if drop_percent >= 50 else 'medium' if drop_percent >= 35 else 'low',
-                            'message': f"Impressions dropped {drop_percent:.1f}% day-over-day"
+                            'message': f"Deliveries dropped {drop_percent:.1f}% day-over-day"
                         }
                         alerts.append(alert)
     
@@ -172,7 +172,7 @@ def generate_comprehensive_alerts(daily_data, columns, day_threshold=35, week_th
         date_key_index = columns.index('date_key')
         tag_id_index = columns.index('tag_id')
         tag_name_index = columns.index('tag_name') if 'tag_name' in columns else None
-        impressions_index = columns.index('total_impressions') if 'total_impressions' in columns else None
+        deliveries_index = columns.index('total_deliveries') if 'total_deliveries' in columns else None
     except ValueError:
         return alerts
     
@@ -207,13 +207,13 @@ def generate_comprehensive_alerts(daily_data, columns, day_threshold=35, week_th
         if not alert_tag_name:
             alert_tag_name = f"Tag {tag_data[0][tag_id_index][:8]}..." if len(tag_data[0][tag_id_index]) > 8 else f"Tag {tag_data[0][tag_id_index]}"
         
-        if impressions_index is not None:
-            current_impressions = tag_data[0][impressions_index] or 0
+        if deliveries_index is not None:
+            current_deliveries = tag_data[0][deliveries_index] or 0
             current_date = tag_data[0][date_key_index]
             
             # 1. Day-over-day comparison (consecutive days)
             if len(tag_data) >= 2:
-                previous_day_impressions = tag_data[1][impressions_index] or 0
+                previous_day_deliveries = tag_data[1][deliveries_index] or 0
                 previous_day_date = tag_data[1][date_key_index]
                 
                 # Check if dates are consecutive
@@ -221,21 +221,21 @@ def generate_comprehensive_alerts(daily_data, columns, day_threshold=35, week_th
                 previous_dt = datetime.strptime(previous_day_date, '%Y-%m-%d')
                 days_diff = (current_dt - previous_dt).days
                 
-                if days_diff == 1 and previous_day_impressions > 2500:  # Consecutive days
-                    if current_impressions < previous_day_impressions:
-                        drop_percent = ((previous_day_impressions - current_impressions) / previous_day_impressions) * 100
+                if days_diff == 1 and previous_day_deliveries > 2500:  # Consecutive days
+                    if current_deliveries < previous_day_deliveries:
+                        drop_percent = ((previous_day_deliveries - current_deliveries) / previous_day_deliveries) * 100
                         
                         if drop_percent >= day_threshold:
                             alert = {
                                 'tag_id': tag_data[0][tag_id_index],
                                 'tag_name': alert_tag_name,
-                                'metric': 'total_impressions',
+                                'metric': 'total_deliveries',
                                 'date': current_date,
-                                'current_value': current_impressions,
-                                'previous_value': previous_day_impressions,
+                                'current_value': current_deliveries,
+                                'previous_value': previous_day_deliveries,
                                 'change_percent': -drop_percent,
                                 'severity': 'high' if drop_percent >= 50 else 'medium' if drop_percent >= 35 else 'low',
-                                'message': f"Impressions dropped {drop_percent:.1f}% day-over-day",
+                                'message': f"Deliveries dropped {drop_percent:.1f}% day-over-day",
                                 'alert_type': 'day_over_day',
                                 'comparison_date': previous_day_date
                             }
@@ -247,14 +247,14 @@ def generate_comprehensive_alerts(daily_data, columns, day_threshold=35, week_th
             current_week_end = current_date
             
             current_week_data = [row for row in tag_data if current_week_start <= str(row[date_key_index]) <= current_week_end]
-            current_week_total = sum(row[impressions_index] or 0 for row in current_week_data)
+            current_week_total = sum(row[deliveries_index] or 0 for row in current_week_data)
             
             # Calculate previous week total (7 days before current week)
             previous_week_start = (current_dt - timedelta(days=13)).strftime('%Y-%m-%d')
             previous_week_end = (current_dt - timedelta(days=7)).strftime('%Y-%m-%d')
             
             previous_week_data = [row for row in tag_data if previous_week_start <= str(row[date_key_index]) <= previous_week_end]
-            previous_week_total = sum(row[impressions_index] or 0 for row in previous_week_data)
+            previous_week_total = sum(row[deliveries_index] or 0 for row in previous_week_data)
             
             if previous_week_total > 2500:  # Only alert if previous week had meaningful traffic
                 # Check for drops
@@ -265,13 +265,13 @@ def generate_comprehensive_alerts(daily_data, columns, day_threshold=35, week_th
                         alert = {
                             'tag_id': tag_data[0][tag_id_index],
                             'tag_name': alert_tag_name,
-                            'metric': 'total_impressions',
+                            'metric': 'total_deliveries',
                             'date': current_date,
                             'current_value': current_week_total,
                             'previous_value': previous_week_total,
                             'change_percent': -drop_percent,
                             'severity': 'high' if drop_percent >= 40 else 'medium' if drop_percent >= 25 else 'low',
-                            'message': f"Impressions dropped {drop_percent:.1f}% week-over-week (cumulative)",
+                            'message': f"Deliveries dropped {drop_percent:.1f}% week-over-week (cumulative)",
                             'alert_type': 'week_over_week',
                             'comparison_date': f"{previous_week_start} to {previous_week_end}",
                             'current_week_range': f"{current_week_start} to {current_week_end}",
@@ -287,13 +287,13 @@ def generate_comprehensive_alerts(daily_data, columns, day_threshold=35, week_th
                         alert = {
                             'tag_id': tag_data[0][tag_id_index],
                             'tag_name': alert_tag_name,
-                            'metric': 'total_impressions',
+                            'metric': 'total_deliveries',
                             'date': current_date,
                             'current_value': current_week_total,
                             'previous_value': previous_week_total,
                             'change_percent': increase_percent,
                             'severity': 'high' if increase_percent >= 50 else 'medium' if increase_percent >= 35 else 'low',
-                            'message': f"Impressions increased {increase_percent:.1f}% week-over-week (cumulative)",
+                            'message': f"Deliveries increased {increase_percent:.1f}% week-over-week (cumulative)",
                             'alert_type': 'week_over_week_increase',
                             'comparison_date': f"{previous_week_start} to {previous_week_end}",
                             'current_week_range': f"{current_week_start} to {current_week_end}",
@@ -305,16 +305,16 @@ def generate_comprehensive_alerts(daily_data, columns, day_threshold=35, week_th
             if len(tag_data) >= 2:
                 # Find the most recent previous day with data (within 3 days)
                 for i in range(1, min(4, len(tag_data))):
-                    previous_day_impressions = tag_data[i][impressions_index] or 0
+                    previous_day_deliveries = tag_data[i][deliveries_index] or 0
                     previous_day_date = tag_data[i][date_key_index]
                     
                     # Check if within 3 days
                     previous_dt = datetime.strptime(previous_day_date, '%Y-%m-%d')
                     days_diff = (current_dt - previous_dt).days
                     
-                    if 1 <= days_diff <= 3 and previous_day_impressions > 2500:
-                        if current_impressions < previous_day_impressions:
-                            drop_percent = ((previous_day_impressions - current_impressions) / previous_day_impressions) * 100
+                    if 1 <= days_diff <= 3 and previous_day_deliveries > 2500:
+                        if current_deliveries < previous_day_deliveries:
+                            drop_percent = ((previous_day_deliveries - current_deliveries) / previous_day_deliveries) * 100
                             
                             # Use a slightly lower threshold for gap-tolerant comparisons
                             gap_threshold = day_threshold * 0.8  # 80% of normal threshold
@@ -323,13 +323,13 @@ def generate_comprehensive_alerts(daily_data, columns, day_threshold=35, week_th
                                 alert = {
                                     'tag_id': tag_data[0][tag_id_index],
                                     'tag_name': alert_tag_name,
-                                    'metric': 'total_impressions',
+                                    'metric': 'total_deliveries',
                                     'date': current_date,
-                                    'current_value': current_impressions,
-                                    'previous_value': previous_day_impressions,
+                                    'current_value': current_deliveries,
+                                    'previous_value': previous_day_deliveries,
                                     'change_percent': -drop_percent,
                                     'severity': 'high' if drop_percent >= 50 else 'medium' if drop_percent >= 35 else 'low',
-                                    'message': f"Impressions dropped {drop_percent:.1f}% vs {days_diff} days ago",
+                                    'message': f"Deliveries dropped {drop_percent:.1f}% vs {days_diff} days ago",
                                     'alert_type': 'gap_tolerant',
                                     'comparison_date': previous_day_date,
                                     'days_gap': days_diff
@@ -421,7 +421,7 @@ def get_performance_summary(cache_data, columns):
         return {}
     
     try:
-        impressions_index = columns.index('total_impressions') if 'total_impressions' in columns else None
+        deliveries_index = columns.index('total_deliveries') if 'total_deliveries' in columns else None
         date_key_index = columns.index('date_key')
     except ValueError:
         return {}
@@ -430,11 +430,11 @@ def get_performance_summary(cache_data, columns):
     today = datetime.now().strftime('%Y-%m-%d')
     filtered_data = [row for row in cache_data if str(row[date_key_index]) < today]
     
-    if not filtered_data or impressions_index is None:
+    if not filtered_data or deliveries_index is None:
         return {}
     
     # Calculate summary metrics
-    total_impressions = sum(row[impressions_index] or 0 for row in filtered_data)
+    total_deliveries = sum(row[deliveries_index] or 0 for row in filtered_data)
     
     # Get date range
     dates = [str(row[date_key_index]) for row in filtered_data]
@@ -445,10 +445,10 @@ def get_performance_summary(cache_data, columns):
     }
     
     # Calculate daily average
-    daily_avg = total_impressions / date_range['days'] if date_range['days'] > 0 else 0
+    daily_avg = total_deliveries / date_range['days'] if date_range['days'] > 0 else 0
     
     return {
-        'total_impressions': total_impressions,
+        'total_deliveries': total_deliveries,
         'daily_average': daily_avg,
         'date_range': date_range,
         'total_records': len(filtered_data)

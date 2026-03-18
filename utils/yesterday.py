@@ -11,37 +11,37 @@ import requests
 
 
 sql_test = """
-    SELECT 
+    SELECT
         t.name AS tag_name,
         m.seat_id,
         m.tag_id,
-        m.provider_channel_id,
-        SUM(m.ad_query_requests) AS total_ad_query_requests,
-        SUM(m.ad_query_responses) AS total_ad_query_responses,
-        SUM(m.ad_slot_requests) AS total_ad_slot_requests,
-        SUM(m.ad_slot_responses) AS total_ad_slot_responses,
-        SUM(m.ad_creative_fetches) AS total_ad_creative_fetches,
-        SUM(m.ad_creative_responses) AS total_ad_creative_responses,
-        CASE 
-            WHEN SUM(m.ad_slot_requests) > 0 
-            THEN (SUM(m.num_impressions) * 100.0 / SUM(m.ad_slot_requests))
-            ELSE 0 
-        END AS fill_rate,
-        CASE 
-            WHEN SUM(m.ad_creative_responses) > 0 
-            THEN (SUM(m.num_impressions) * 100.0 / SUM(m.ad_creative_responses))
-            ELSE 0 
-        END AS avg_render_rate,
-        SUM(m.num_impressions) AS total_impressions,
+        m.channel_id,
+        SUM(m.query_requests) AS total_type_a_requests,
+        SUM(m.query_responses) AS total_type_a_responses,
+        SUM(m.slot_requests) AS total_type_b_requests,
+        SUM(m.slot_responses) AS total_type_b_responses,
+        SUM(m.creative_fetches) AS total_type_c_fetches,
+        SUM(m.creative_responses) AS total_type_c_responses,
+        CASE
+            WHEN SUM(m.slot_requests) > 0
+            THEN (SUM(m.deliveries) * 100.0 / SUM(m.slot_requests))
+            ELSE 0
+        END AS completion_rate,
+        CASE
+            WHEN SUM(m.creative_responses) > 0
+            THEN (SUM(m.deliveries) * 100.0 / SUM(m.creative_responses))
+            ELSE 0
+        END AS avg_success_rate,
+        SUM(m.deliveries) AS total_deliveries,
         m.date_key
-    FROM advertising.agg_raps_rams_metrics_daily_v2 m
-    LEFT JOIN ads.dim_rams_tags_history t ON m.tag_id = t.tag_id AND t.date_key = m.date_key
-    WHERE m.date_key = 'YESTERDAY_DATE' 
+    FROM analytics.agg_metrics_daily m
+    LEFT JOIN analytics.dim_tags_history t ON m.tag_id = t.tag_id AND t.date_key = m.date_key
+    WHERE m.date_key = 'YESTERDAY_DATE'
       AND m.seat_id IN ('SEAT_ID_LIST')
-      AND m.date_id_est IS NOT NULL
-    GROUP BY 
+      AND m.date_id IS NOT NULL
+    GROUP BY
         t.name, m.seat_id, m.tag_id,
-        m.date_key, m.provider_channel_id
+        m.date_key, m.channel_id
     ORDER BY m.seat_id, m.date_key DESC
     """
 
@@ -69,7 +69,7 @@ def fetch_from_superset_api_test(sql_test):
     payload = {
         "database_id": SUPERSET_DB_ID,
         "sql": sql_test,
-        "schema": "advertising"
+        "schema": "analytics"
     }
     
     try:
@@ -92,7 +92,7 @@ def fetch_from_superset_api_test(sql_test):
         except Exception as e:
             print(f"❌ Error parsing JSON: {e}")
         
-        # Parse and print seat_id and impressions
+        # Parse and print seat_id and deliveries
         if response.status_code == 200:
             try:
                 data = response.json()
@@ -102,22 +102,22 @@ def fetch_from_superset_api_test(sql_test):
                     # Nested dictionary with 'data' key
                     rows = data['data']
                     if isinstance(rows, list):
-                        print(f"\n📊 All Data (Seat ID, Tag Name, Impressions):")
+                        print(f"\n📊 All Data (Seat ID, Tag Name, Deliveries):")
                         for i, row in enumerate(rows):
                             seat_id = row.get('seat_id', 'N/A')
                             tag_name = row.get('tag_name', 'N/A')
-                            impressions = row.get('total_impressions', 'N/A')
-                            print(f"  {i+1}. Seat ID: {seat_id}, Tag: {tag_name}, Impressions: {impressions}")
+                            deliveries = row.get('total_deliveries', 'N/A')
+                            print(f"  {i+1}. Seat ID: {seat_id}, Tag: {tag_name}, Deliveries: {deliveries}")
                     else:
                         print(f"❌ 'data' is not a list: {type(rows)}")
                 elif isinstance(data, list):
                     # Direct list of dictionaries
                     rows = data
-                    print(f"\n📊 Seat ID and Impressions (showing first 5):")
+                    print(f"\n📊 Seat ID and Deliveries (showing first 5):")
                     for i, row in enumerate(rows[:5]):  # Only show first 5
                         seat_id = row.get('seat_id', 'N/A')
-                        impressions = row.get('total_impressions', 'N/A')
-                        print(f"  {i+1}. Seat ID: {seat_id}, Impressions: {impressions}")
+                        deliveries = row.get('total_deliveries', 'N/A')
+                        print(f"  {i+1}. Seat ID: {seat_id}, Deliveries: {deliveries}")
                     if len(rows) > 5:
                         print(f"  ... and {len(rows) - 5} more rows")
                 else:
@@ -193,29 +193,29 @@ def fetch_missing_yesterday_data():
         t.name AS tag_name,
         m.seat_id,
         m.tag_id,
-        SUM(m.ad_query_requests) AS total_ad_query_requests,
-        SUM(m.ad_query_responses) AS total_ad_query_responses,
-        SUM(m.ad_slot_requests) AS total_ad_slot_requests,
-        SUM(m.ad_slot_responses) AS total_ad_slot_responses,
-        SUM(m.ad_creative_fetches) AS total_ad_creative_fetches,
-        SUM(m.ad_creative_responses) AS total_ad_creative_responses,
-        CASE 
-            WHEN SUM(m.ad_slot_requests) > 0 
-            THEN (SUM(m.num_impressions) * 100.0 / SUM(m.ad_slot_requests))
-            ELSE 0 
-        END AS fill_rate,
-        CASE 
-            WHEN SUM(m.ad_creative_responses) > 0 
-            THEN (SUM(m.num_impressions) * 100.0 / SUM(m.ad_creative_responses))
-            ELSE 0 
-        END AS avg_render_rate,
-        SUM(m.num_impressions) AS total_impressions,
+        SUM(m.query_requests) AS total_type_a_requests,
+        SUM(m.query_responses) AS total_type_a_responses,
+        SUM(m.slot_requests) AS total_type_b_requests,
+        SUM(m.slot_responses) AS total_type_b_responses,
+        SUM(m.creative_fetches) AS total_type_c_fetches,
+        SUM(m.creative_responses) AS total_type_c_responses,
+        CASE
+            WHEN SUM(m.slot_requests) > 0
+            THEN (SUM(m.deliveries) * 100.0 / SUM(m.slot_requests))
+            ELSE 0
+        END AS completion_rate,
+        CASE
+            WHEN SUM(m.creative_responses) > 0
+            THEN (SUM(m.deliveries) * 100.0 / SUM(m.creative_responses))
+            ELSE 0
+        END AS avg_success_rate,
+        SUM(m.deliveries) AS total_deliveries,
         m.date_key
-    FROM advertising.agg_raps_rams_metrics_daily_v2 m
-    LEFT JOIN ads.dim_rams_tags_history t ON m.tag_id = t.tag_id AND t.date_key = m.date_key
-    WHERE m.date_key = '{yesterday}' 
+    FROM analytics.agg_metrics_daily m
+    LEFT JOIN analytics.dim_tags_history t ON m.tag_id = t.tag_id AND t.date_key = m.date_key
+    WHERE m.date_key = '{yesterday}'
       AND m.seat_id IN ('{seat_id_list}')
-      AND m.date_id_est IS NOT NULL
+      AND m.date_id IS NOT NULL
     GROUP BY 
         t.name, m.seat_id, m.tag_id, m.date_key
     ORDER BY m.seat_id, m.date_key DESC
@@ -225,7 +225,7 @@ def fetch_missing_yesterday_data():
     payload = {
         "database_id": SUPERSET_DB_ID,
         "sql": sql,
-        "schema": "advertising"
+        "schema": "analytics"
     }
     
     try:
@@ -272,10 +272,10 @@ def store_yesterday_data_to_cache(api_data):
     if api_data and isinstance(api_data[0], dict):
         # Define column order to match cache format
         columns = ['tag_name', 'seat_id', 'tag_id', 
-                  'total_ad_query_requests', 'total_ad_query_responses', 
-                  'total_ad_slot_requests', 'total_ad_slot_responses', 
-                  'total_ad_creative_fetches', 'total_ad_creative_responses', 
-                  'fill_rate', 'avg_render_rate', 'total_impressions', 'date_key']
+                  'total_type_a_requests', 'total_type_a_responses', 
+                  'total_type_b_requests', 'total_type_b_responses', 
+                  'total_type_c_fetches', 'total_type_c_responses', 
+                  'completion_rate', 'avg_success_rate', 'total_deliveries', 'date_key']
         
         # Convert each row from dict to list
         converted_data = []
@@ -301,10 +301,10 @@ def store_yesterday_data_to_cache(api_data):
         if seat_data:
             # Define columns for new data
             columns = ['tag_name', 'seat_id', 'tag_id', 
-                      'total_ad_query_requests', 'total_ad_query_responses', 
-                      'total_ad_slot_requests', 'total_ad_slot_responses', 
-                      'total_ad_creative_fetches', 'total_ad_creative_responses', 
-                      'fill_rate', 'avg_render_rate', 'total_impressions', 'date_key']
+                      'total_type_a_requests', 'total_type_a_responses', 
+                      'total_type_b_requests', 'total_type_b_responses', 
+                      'total_type_c_fetches', 'total_type_c_responses', 
+                      'completion_rate', 'avg_success_rate', 'total_deliveries', 'date_key']
             
             # Get existing cache or create new
             existing_cache = cache_get_unified('query1', seat_id) or {'data': [], 'columns': columns}
@@ -327,8 +327,8 @@ def store_yesterday_data_to_cache(api_data):
                     print(f"✅ Cached {len(seat_data)} rows for seat_id {seat_id}")
 
 
-def remove_provider_channel_id_from_cache():
-    """Remove provider_channel_id column from existing cached data"""
+def remove_channel_id_from_cache():
+    """Remove channel_id column from existing cached data"""
     with sqlite3.connect(DB_PATH) as conn:
         c = conn.cursor()
         c.execute("SELECT cache_key, result FROM query_cache WHERE cache_key LIKE 'seat_id_%'")
@@ -339,14 +339,14 @@ def remove_provider_channel_id_from_cache():
             try:
                 cache_object = json.loads(result_json)
                 if 'columns' in cache_object and 'data' in cache_object:
-                    # Find provider_channel_id column index
+                    # Find channel_id column index
                     try:
-                        provider_index = cache_object['columns'].index('provider_channel_id')
+                        provider_index = cache_object['columns'].index('channel_id')
                         
-                        # Remove provider_channel_id from columns
+                        # Remove channel_id from columns
                         cache_object['columns'].pop(provider_index)
                         
-                        # Remove provider_channel_id from each data row
+                        # Remove channel_id from each data row
                         for row in cache_object['data']:
                             if len(row) > provider_index:
                                 row.pop(provider_index)
@@ -357,11 +357,11 @@ def remove_provider_channel_id_from_cache():
                             (json.dumps(cache_object), datetime.now().isoformat(), cache_key)
                         )
                         updated_count += 1
-                        print(f"✅ Updated {cache_key} - removed provider_channel_id column")
+                        print(f"✅ Updated {cache_key} - removed channel_id column")
                         
                     except ValueError:
-                        # provider_channel_id column not found, skip
-                        print(f"⚠️ {cache_key} - no provider_channel_id column found")
+                        # channel_id column not found, skip
+                        print(f"⚠️ {cache_key} - no channel_id column found")
                         continue
                         
             except Exception as e:
@@ -369,7 +369,7 @@ def remove_provider_channel_id_from_cache():
                 continue
         
         conn.commit()
-        print(f"🔄 Updated {updated_count} cache entries to remove provider_channel_id")
+        print(f"🔄 Updated {updated_count} cache entries to remove channel_id")
         return updated_count
 
 

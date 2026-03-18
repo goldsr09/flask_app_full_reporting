@@ -8,7 +8,7 @@ import traceback
 from datetime import datetime
 from utils.superset_utils import fetch_from_superset, fetch_from_superset_query2_with_fallback
 from utils.cache_utils import cache_get_unified, search_tags_in_cache
-from utils.analysis_utils import analyze_cache_trends, generate_impression_alerts
+from utils.analysis_utils import analyze_cache_trends, generate_delivery_alerts
 from config import DB_PATH
 
 main_bp = Blueprint('main', __name__)
@@ -153,7 +153,7 @@ def query1():
     
     else:
         # Set default date_from for GET requests
-        date_from = '2025-07-01'
+        date_from = '2025-01-01'
         print(f"Query1 GET request - setting default date_from: {date_from}")
 
     print(f"Query1 Rendering template with {len(data)} rows")
@@ -306,7 +306,7 @@ def query2():
     
     else:
         # Set default date_from for GET requests
-        date_from = '2025-07-01'
+        date_from = '2025-01-01'
         print(f"Query2 GET request - setting default date_from: {date_from}")
 
     print(f"Query2 Rendering template with {len(data)} rows")

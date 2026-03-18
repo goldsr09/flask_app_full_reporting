@@ -5,7 +5,7 @@ from flask import Blueprint, request, jsonify
 import sqlite3
 import json
 from datetime import datetime, timedelta
-from utils.analysis_utils import generate_impression_alerts
+from utils.analysis_utils import generate_delivery_alerts
 from utils.cache_utils import search_tags_in_cache
 from config import DB_PATH
 
@@ -280,17 +280,17 @@ def api_health():
 @api_bp.route('/debug-analysis')
 def api_debug_analysis():
     """Debug endpoint to understand why analysis might not be showing results"""
-    from utils.analysis_utils import generate_impression_alerts, analyze_cache_trends
+    from utils.analysis_utils import generate_delivery_alerts, analyze_cache_trends
 
 @api_bp.route('/test-alerts')
 def api_test_alerts():
     """Test endpoint to debug alerts filtering"""
-    from utils.analysis_utils import generate_impression_alerts
+    from utils.analysis_utils import generate_delivery_alerts
 
 @api_bp.route('/test-alerts-all')
 def api_test_alerts_all():
     """Test endpoint to check all cache entries for alerts"""
-    from utils.analysis_utils import generate_impression_alerts
+    from utils.analysis_utils import generate_delivery_alerts
 
 @api_bp.route('/debug-dates')
 def api_debug_dates():
@@ -316,8 +316,8 @@ def api_test_comprehensive_alerts():
             cache_object = json.loads(result_json)
             if 'columns' in cache_object and 'data' in cache_object:
                 # Test old system
-                from utils.analysis_utils import generate_impression_alerts
-                old_alerts = generate_impression_alerts(cache_object['data'], cache_object['columns'])
+                from utils.analysis_utils import generate_delivery_alerts
+                old_alerts = generate_delivery_alerts(cache_object['data'], cache_object['columns'])
                 
                 # Test new system
                 from utils.analysis_utils import generate_comprehensive_alerts
@@ -367,10 +367,10 @@ def api_check_tag(tag_id):
                 columns = cache_object['columns']
                 data = cache_object['data']
                 
-                if 'date_key' in columns and 'tag_id' in columns and 'total_impressions' in columns:
+                if 'date_key' in columns and 'tag_id' in columns and 'total_deliveries' in columns:
                     date_index = columns.index('date_key')
                     tag_index = columns.index('tag_id')
-                    impressions_index = columns.index('total_impressions')
+                    deliveries_index = columns.index('total_deliveries')
                     
                     # Find data for this specific tag
                     tag_data = []
@@ -378,7 +378,7 @@ def api_check_tag(tag_id):
                         if str(row[tag_index]) == tag_id:
                             tag_data.append({
                                 'date': str(row[date_index]),
-                                'impressions': row[impressions_index] or 0
+                                'deliveries': row[deliveries_index] or 0
                             })
                     
                     if tag_data:
@@ -389,7 +389,7 @@ def api_check_tag(tag_id):
                         from datetime import datetime, timedelta
                         if len(tag_data) > 0:
                             current_date = tag_data[0]['date']
-                            current_impressions = tag_data[0]['impressions']
+                            current_deliveries = tag_data[0]['deliveries']
                             current_dt = datetime.strptime(current_date, '%Y-%m-%d')
                             
                             # Calculate cumulative weekly totals
@@ -398,20 +398,20 @@ def api_check_tag(tag_id):
                             current_week_end = current_date
                             
                             current_week_data = [row for row in tag_data if current_week_start <= row['date'] <= current_week_end]
-                            current_week_total = sum(row['impressions'] for row in current_week_data)
+                            current_week_total = sum(row['deliveries'] for row in current_week_data)
                             
                             # Previous week total (7 days before current week)
                             previous_week_start = (current_dt - timedelta(days=13)).strftime('%Y-%m-%d')
                             previous_week_end = (current_dt - timedelta(days=7)).strftime('%Y-%m-%d')
                             
                             previous_week_data = [row for row in tag_data if previous_week_start <= row['date'] <= previous_week_end]
-                            previous_week_total = sum(row['impressions'] for row in previous_week_data)
+                            previous_week_total = sum(row['deliveries'] for row in previous_week_data)
                             
                             analysis = {
                                 'cache_key': cache_key,
                                 'tag_id': tag_id,
                                 'current_date': current_date,
-                                'current_impressions': current_impressions,
+                                'current_deliveries': current_deliveries,
                                 'current_week_total': current_week_total,
                                 'previous_week_total': previous_week_total,
                                 'current_week_range': f"{current_week_start} to {current_week_end}",
@@ -477,21 +477,21 @@ def api_debug_day_over_day():
                 columns = cache_object['columns']
                 data = cache_object['data']
                 
-                if 'date_key' in columns and 'tag_id' in columns and 'total_impressions' in columns:
+                if 'date_key' in columns and 'tag_id' in columns and 'total_deliveries' in columns:
                     date_index = columns.index('date_key')
                     tag_index = columns.index('tag_id')
-                    impressions_index = columns.index('total_impressions')
+                    deliveries_index = columns.index('total_deliveries')
                     
                     # Group by tag
                     tag_data = {}
                     for row in data:
                         tag_id = str(row[tag_index])
                         date = str(row[date_index])
-                        impressions = row[impressions_index] or 0
+                        deliveries = row[deliveries_index] or 0
                         
                         if tag_id not in tag_data:
                             tag_data[tag_id] = []
-                        tag_data[tag_id].append({'date': date, 'impressions': impressions})
+                        tag_data[tag_id].append({'date': date, 'deliveries': deliveries})
                     
                     # Analyze each tag
                     tag_analysis = []
@@ -513,14 +513,14 @@ def api_debug_day_over_day():
                                 days_diff = (current_date - previous_date).days
                                 
                                 if days_diff == 1:  # Consecutive days
-                                    if previous['impressions'] > 2500:
-                                        if current['impressions'] < previous['impressions']:
-                                            drop_percent = ((previous['impressions'] - current['impressions']) / previous['impressions']) * 100
+                                    if previous['deliveries'] > 2500:
+                                        if current['deliveries'] < previous['deliveries']:
+                                            drop_percent = ((previous['deliveries'] - current['deliveries']) / previous['deliveries']) * 100
                                             consecutive_comparisons.append({
                                                 'current_date': current['date'],
                                                 'previous_date': previous['date'],
-                                                'current_impressions': current['impressions'],
-                                                'previous_impressions': previous['impressions'],
+                                                'current_deliveries': current['deliveries'],
+                                                'previous_deliveries': previous['deliveries'],
                                                 'drop_percent': drop_percent,
                                                 'would_alert_35': drop_percent >= 35,
                                                 'would_alert_20': drop_percent >= 20,
@@ -562,10 +562,10 @@ def api_debug_day_over_day():
             cache_object = json.loads(result_json)
             if 'columns' in cache_object and 'data' in cache_object:
                 # Test with lower threshold (10% instead of 35%)
-                from utils.analysis_utils import generate_impression_alerts
-                alerts_10 = generate_impression_alerts(cache_object['data'], cache_object['columns'], threshold_percent=10)
-                alerts_20 = generate_impression_alerts(cache_object['data'], cache_object['columns'], threshold_percent=20)
-                alerts_35 = generate_impression_alerts(cache_object['data'], cache_object['columns'], threshold_percent=35)
+                from utils.analysis_utils import generate_delivery_alerts
+                alerts_10 = generate_delivery_alerts(cache_object['data'], cache_object['columns'], threshold_percent=10)
+                alerts_20 = generate_delivery_alerts(cache_object['data'], cache_object['columns'], threshold_percent=20)
+                alerts_35 = generate_delivery_alerts(cache_object['data'], cache_object['columns'], threshold_percent=35)
                 
                 all_alerts.append({
                     'cache_key': cache_key,
@@ -639,21 +639,21 @@ def api_debug_day_over_day():
                 data = cache_object['data']
                 
                 # Detailed analysis of this cache entry
-                if 'date_key' in columns and 'tag_id' in columns and 'total_impressions' in columns:
+                if 'date_key' in columns and 'tag_id' in columns and 'total_deliveries' in columns:
                     date_index = columns.index('date_key')
                     tag_index = columns.index('tag_id')
-                    impressions_index = columns.index('total_impressions')
+                    deliveries_index = columns.index('total_deliveries')
                     
                     # Group by tag and analyze
                     tag_analysis = {}
                     for row in data:
                         tag_id = str(row[tag_index])
                         date = str(row[date_index])
-                        impressions = row[impressions_index] or 0
+                        deliveries = row[deliveries_index] or 0
                         
                         if tag_id not in tag_analysis:
                             tag_analysis[tag_id] = []
-                        tag_analysis[tag_id].append({'date': date, 'impressions': impressions})
+                        tag_analysis[tag_id].append({'date': date, 'deliveries': deliveries})
                     
                     # Analyze each tag
                     tag_details = []
@@ -662,26 +662,26 @@ def api_debug_day_over_day():
                             # Sort by date
                             tag_rows.sort(key=lambda x: x['date'], reverse=True)
                             
-                            # Check if previous day had > 2500 impressions
-                            previous_day_impressions = tag_rows[1]['impressions'] if len(tag_rows) > 1 else 0
-                            current_day_impressions = tag_rows[0]['impressions']
+                            # Check if previous day had > 2500 deliveries
+                            previous_day_deliveries = tag_rows[1]['deliveries'] if len(tag_rows) > 1 else 0
+                            current_day_deliveries = tag_rows[0]['deliveries']
                             
-                            if previous_day_impressions > 2500:
+                            if previous_day_deliveries > 2500:
                                 # Calculate drop percentage
-                                if current_day_impressions < previous_day_impressions:
-                                    drop_percent = ((previous_day_impressions - current_day_impressions) / previous_day_impressions) * 100
+                                if current_day_deliveries < previous_day_deliveries:
+                                    drop_percent = ((previous_day_deliveries - current_day_deliveries) / previous_day_deliveries) * 100
                                     
                                     tag_details.append({
                                         'tag_id': tag_id,
                                         'current_date': tag_rows[0]['date'],
                                         'previous_date': tag_rows[1]['date'],
-                                        'current_impressions': current_day_impressions,
-                                        'previous_impressions': previous_day_impressions,
+                                        'current_deliveries': current_day_deliveries,
+                                        'previous_deliveries': previous_day_deliveries,
                                         'drop_percent': drop_percent,
                                         'would_alert': drop_percent >= 35
                                     })
                 
-                alerts = generate_impression_alerts(data, columns)
+                alerts = generate_delivery_alerts(data, columns)
                 if alerts:
                     all_alerts.extend(alerts)
                 
@@ -690,7 +690,7 @@ def api_debug_day_over_day():
                     'record_count': len(data),
                     'unique_tags': len(tag_analysis) if 'tag_id' in columns else 0,
                     'tags_with_sufficient_data': len([t for t in tag_analysis.values() if len(t) >= 2]) if 'tag_id' in columns else 0,
-                    'tags_with_high_traffic': len([t for t in tag_analysis.values() if len(t) >= 2 and t[1]['impressions'] > 2500]) if 'tag_id' in columns else 0,
+                    'tags_with_high_traffic': len([t for t in tag_analysis.values() if len(t) >= 2 and t[1]['deliveries'] > 2500]) if 'tag_id' in columns else 0,
                     'potential_alerts': len([d for d in tag_details if d['would_alert']]) if 'tag_details' in locals() else 0,
                     'actual_alerts': len(alerts),
                     'tag_details': tag_details if 'tag_details' in locals() else []
@@ -725,7 +725,7 @@ def api_debug_day_over_day():
                 data = cache_object['data']
                 
                 # Check if we have the required columns
-                has_required_columns = all(col in columns for col in ['date_key', 'tag_id', 'total_impressions'])
+                has_required_columns = all(col in columns for col in ['date_key', 'tag_id', 'total_deliveries'])
                 
                 # Get date range
                 date_range = {'min': None, 'max': None}
@@ -743,21 +743,21 @@ def api_debug_day_over_day():
                     unique_tags = set(str(row[tag_index]) for row in data if row[tag_index])
                 
                 # Analyze data structure for debugging
-                if 'date_key' in columns and 'tag_id' in columns and 'total_impressions' in columns:
+                if 'date_key' in columns and 'tag_id' in columns and 'total_deliveries' in columns:
                     date_index = columns.index('date_key')
                     tag_index = columns.index('tag_id')
-                    impressions_index = columns.index('total_impressions')
+                    deliveries_index = columns.index('total_deliveries')
                     
                     # Group by tag and check data
                     tag_data_analysis = {}
                     for row in data:
                         tag_id = str(row[tag_index])
                         date = str(row[date_index])
-                        impressions = row[impressions_index] or 0
+                        deliveries = row[deliveries_index] or 0
                         
                         if tag_id not in tag_data_analysis:
                             tag_data_analysis[tag_id] = []
-                        tag_data_analysis[tag_id].append({'date': date, 'impressions': impressions})
+                        tag_data_analysis[tag_id].append({'date': date, 'deliveries': deliveries})
                     
                     # Check each tag's data
                     tags_with_sufficient_data = 0
@@ -765,11 +765,11 @@ def api_debug_day_over_day():
                         if len(tag_rows) >= 2:
                             # Sort by date
                             tag_rows.sort(key=lambda x: x['date'], reverse=True)
-                            # Check if previous day had > 2500 impressions
-                            if tag_rows[1]['impressions'] > 2500:
+                            # Check if previous day had > 2500 deliveries
+                            if tag_rows[1]['deliveries'] > 2500:
                                 tags_with_sufficient_data += 1
                 
-                alerts = generate_impression_alerts(data, columns)
+                alerts = generate_delivery_alerts(data, columns)
                 all_alerts.extend(alerts)
                 
                 debug_info.append({
@@ -811,7 +811,7 @@ def api_debug_day_over_day():
         'data_requirements': {
             'min_days_for_trends': 7,
             'min_days_for_alerts': 2,
-            'min_impressions_for_alerts': 2500,
+            'min_deliveries_for_alerts': 2500,
             'excludes_today': True
         }
     }
@@ -827,7 +827,7 @@ def api_debug_day_over_day():
                 data = cache_object['data']
                 
                 # Analyze this cache entry
-                alerts = generate_impression_alerts(data, columns)
+                alerts = generate_delivery_alerts(data, columns)
                 trends = analyze_cache_trends(data, columns)
                 
                 all_alerts.extend(alerts)
@@ -842,19 +842,19 @@ def api_debug_day_over_day():
                         date_range['min'] = min(dates)
                         date_range['max'] = max(dates)
                 
-                # Check if we have impression data
-                has_impressions = 'total_impressions' in columns
-                impression_count = 0
-                if has_impressions:
-                    impression_index = columns.index('total_impressions')
-                    impression_count = sum(1 for row in data if row[impression_index] and row[impression_index] > 0)
+                # Check if we have delivery data
+                has_deliveries = 'total_deliveries' in columns
+                delivery_count = 0
+                if has_deliveries:
+                    delivery_index = columns.index('total_deliveries')
+                    delivery_count = sum(1 for row in data if row[delivery_index] and row[delivery_index] > 0)
                 
                 cache_entry_info = {
                     'cache_key': cache_key,
                     'record_count': len(data),
                     'date_range': date_range,
-                    'has_impressions': has_impressions,
-                    'impression_records': impression_count,
+                    'has_deliveries': has_deliveries,
+                    'delivery_records': delivery_count,
                     'alerts_found': len(alerts),
                     'trends_found': len(trends),
                     'columns': columns
@@ -1082,13 +1082,13 @@ def api_test_notification():
     test_alert = {
         'tag_id': 'TEST_TAG_001',
         'tag_name': 'Test Tag',
-        'metric': 'total_impressions',
+        'metric': 'total_deliveries',
         'date': datetime.now().strftime('%Y-%m-%d'),
         'current_value': 1000,
         'previous_value': 2000,
         'change_percent': -50.0,
         'severity': 'medium',
-        'message': 'Test alert - Impressions dropped 50.0% day-over-day',
+        'message': 'Test alert - Deliveries dropped 50.0% day-over-day',
         'alert_type': 'day_over_day'
     }
     

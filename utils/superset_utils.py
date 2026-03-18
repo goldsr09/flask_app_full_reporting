@@ -25,38 +25,38 @@ SUPERSET_HEADERS = {
     "X-CSRFToken": Placeholder"
     "Cookie": "Placeholder"
 }
-SUPERSET_DB_ID = 2
+SUPERSET_DB_ID = 1
 
 # --- Working Query Template ---
 QUERY_TEMPLATE = """
-SELECT 
+SELECT
     f.date_key,
-    CAST(d AS VARCHAR) AS deal_id,
-    COALESCE(h.name, CAST(d AS VARCHAR)) AS deal_name,
-    SUM(f.is_impressed) AS imps,
-    SUM(CASE WHEN f.ad_fetch_source IS NULL AND f.event_type = 'candidate' THEN 1 ELSE 0 END) AS real_demand_returned,
-    SUM(f.num_opportunities) AS oppos,
-    SUM(f.is_selected) AS total_bids,
-    SUM(CASE WHEN f.is_impressed IS NULL AND f.event_type = 'candidate' AND f.ad_fetch_source IS NULL THEN 1 ELSE 0 END) AS Loss_Totals,
-    (SUM(f.is_impressed) * 1.000 / NULLIF(SUM(f.num_opportunities), 0)) * 100.00 AS fill_rate,
-    SUM(CASE WHEN f.event_type = 'demand_request' THEN 1 ELSE 0 END) AS Requests,
-    (SUM(f.is_impressed) * 1.000 / NULLIF(SUM(f.is_selected), 0)) * 100.00 AS render_rate,
-    (SUM(f.is_selected) * 1.000 / NULLIF(SUM(CASE WHEN f.ad_fetch_source IS NULL AND f.event_type = 'candidate' THEN 1 ELSE 0 END), 0)) * 100.00 AS win_rate,
-    SUM(CASE WHEN f.event_type = 'candidate' THEN 1 ELSE 0 END) AS candidates
+    CAST(d AS VARCHAR) AS item_id,
+    COALESCE(h.name, CAST(d AS VARCHAR)) AS item_name,
+    SUM(f.is_completed) AS total_completed,
+    SUM(CASE WHEN f.fetch_source IS NULL AND f.event_type = 'eligible' THEN 1 ELSE 0 END) AS valid_responses,
+    SUM(f.num_events) AS total_events,
+    SUM(f.is_selected) AS total_selections,
+    SUM(CASE WHEN f.is_completed IS NULL AND f.event_type = 'eligible' AND f.fetch_source IS NULL THEN 1 ELSE 0 END) AS missed_totals,
+    (SUM(f.is_completed) * 1.000 / NULLIF(SUM(f.num_events), 0)) * 100.00 AS completion_rate,
+    SUM(CASE WHEN f.event_type = 'data_request' THEN 1 ELSE 0 END) AS total_requests,
+    (SUM(f.is_completed) * 1.000 / NULLIF(SUM(f.is_selected), 0)) * 100.00 AS success_rate,
+    (SUM(f.is_selected) * 1.000 / NULLIF(SUM(CASE WHEN f.fetch_source IS NULL AND f.event_type = 'eligible' THEN 1 ELSE 0 END), 0)) * 100.00 AS selection_rate,
+    SUM(CASE WHEN f.event_type = 'eligible' THEN 1 ELSE 0 END) AS eligible_count
 FROM
-    advertising.demand_funnel f
-CROSS JOIN UNNEST(f.deal_id) AS t(d)
-LEFT JOIN ads.dim_rams_deals_history h
+    analytics.events_summary f
+CROSS JOIN UNNEST(f.item_id) AS t(d)
+LEFT JOIN analytics.dim_items_history h
     ON CAST(d AS VARCHAR) = CAST(h.id AS VARCHAR)
     AND f.date_key = h.date_key
-WHERE 
+WHERE
     f.date_key >= '{date_from}'
     {date_to_condition}
-    AND CONTAINS(f.demand_systems, 'PARTNER_AD_SERVER_VIDEO')
-    {deal_name_condition}
-GROUP BY 
+    AND CONTAINS(f.source_systems, 'PARTNER_SYSTEM_A')
+    {item_name_condition}
+GROUP BY
     f.date_key, CAST(d AS VARCHAR), COALESCE(h.name, CAST(d AS VARCHAR))
-ORDER BY 
+ORDER BY
     f.date_key ASC, CAST(d AS VARCHAR) ASC
 LIMIT 10000
 """
@@ -67,7 +67,7 @@ def test_superset_connection():
     payload = {
         "database_id": SUPERSET_DB_ID,
         "sql": test_sql,
-        "schema": "advertising"
+        "schema": "analytics"
     }
     
     try:
@@ -124,28 +124,28 @@ def generate_mock_data(date_from, date_to, entity_id, query_type):
     
     if query_type == 'query1':
         # Mock data for Query 1 (seat_id)
-        columns = ['date_key', 'tag_id', 'tag_name', 'total_impressions', 'total_ad_query_requests', 'total_ad_query_responses']
+        columns = ['date_key', 'tag_id', 'tag_name', 'total_deliveries', 'total_type_a_requests', 'total_type_a_responses']
         data = []
         for date in dates:
             for i in range(3):  # 3 tags per day
                 data.append([
                     date,
                     f"tag_{entity_id}_{i}",
-                    f"Mock Tag {i}",
+                    f"Sample Tag {i}",
                     (i + 1) * 1000,
                     (i + 1) * 500,
                     (i + 1) * 450
                 ])
     else:
         # Mock data for Query 2 (publisher_id)
-        columns = ['date_key', 'tag_id', 'tag_name', 'video_impressions', 'video_requests', 'video_responses']
+        columns = ['date_key', 'tag_id', 'tag_name', 'media_deliveries', 'media_requests', 'media_responses']
         data = []
         for date in dates:
             for i in range(2):  # 2 tags per day
                 data.append([
                     date,
-                    f"pub_tag_{entity_id}_{i}",
-                    f"Publisher Tag {i}",
+                    f"tag_{entity_id}_{i}",
+                    f"Sample Tag {i}",
                     (i + 1) * 800,
                     (i + 1) * 400,
                     (i + 1) * 380
@@ -159,7 +159,7 @@ def fetch_from_superset_api(sql):
     payload = {
         "database_id": SUPERSET_DB_ID,
         "sql": sql,
-        "schema": "advertising"
+        "schema": "analytics"
     }
     
     try:
@@ -308,29 +308,29 @@ def fetch_from_superset(date_from, date_to, seat_id):
             t.name AS tag_name,
             m.seat_id,
             m.tag_id,
-            SUM(m.ad_query_requests) AS total_ad_query_requests,
-            SUM(m.ad_query_responses) AS total_ad_query_responses,
-            SUM(m.ad_slot_requests) AS total_ad_slot_requests,
-            SUM(m.ad_slot_responses) AS total_ad_slot_responses,
-            SUM(m.ad_creative_fetches) AS total_ad_creative_fetches,
-            SUM(m.ad_creative_responses) AS total_ad_creative_responses,
+            SUM(m.query_requests) AS total_type_a_requests,
+            SUM(m.query_responses) AS total_type_a_responses,
+            SUM(m.slot_requests) AS total_type_b_requests,
+            SUM(m.slot_responses) AS total_type_b_responses,
+            SUM(m.creative_fetches) AS total_type_c_fetches,
+            SUM(m.creative_responses) AS total_type_c_responses,
             CASE 
-                WHEN SUM(m.ad_slot_requests) > 0 
-                THEN (SUM(m.num_impressions) * 100.0 / SUM(m.ad_slot_requests))
+                WHEN SUM(m.slot_requests) > 0 
+                THEN (SUM(m.deliveries) * 100.0 / SUM(m.slot_requests))
                 ELSE 0 
-            END AS fill_rate,
+            END AS completion_rate,
             CASE 
-                WHEN SUM(m.ad_creative_responses) > 0 
-                THEN (SUM(m.num_impressions) * 100.0 / SUM(m.ad_creative_responses))
+                WHEN SUM(m.creative_responses) > 0 
+                THEN (SUM(m.deliveries) * 100.0 / SUM(m.creative_responses))
                 ELSE 0 
-            END AS avg_render_rate,
-            SUM(m.num_impressions) AS total_impressions,
+            END AS avg_success_rate,
+            SUM(m.deliveries) AS total_deliveries,
             m.date_key
-        FROM advertising.agg_raps_rams_metrics_daily_v2 m
-        LEFT JOIN ads.dim_rams_tags_history t ON m.tag_id = t.tag_id AND t.date_key = m.date_key
+        FROM analytics.agg_metrics_daily m
+        LEFT JOIN analytics.dim_tags_history t ON m.tag_id = t.tag_id AND t.date_key = m.date_key
         WHERE m.date_key BETWEEN '{range_start}' AND '{range_end}' 
           AND m.seat_id = '{seat_id}'
-          AND m.date_id_est IS NOT NULL
+          AND m.date_id IS NOT NULL
         GROUP BY 
             t.name, m.seat_id, m.tag_id, m.date_key
         ORDER BY m.date_key DESC
@@ -474,19 +474,19 @@ def fetch_query2_with_timeout_fallback(date_from, date_to, publisher_id):
             SELECT 
                 tag_id,
                 date_key,
-                SUM(pod_based_ad_requests) AS total_pod_based_ad_requests,
-                SUM(pod_unfilled_ad_requests) AS total_pod_unfilled_ad_requests,
-                SUM(num_unfiltered_ad_requests) AS total_num_unfiltered_ad_requests
-            FROM advertising.granular_rams_video_ad_requests
+                SUM(pod_requests) AS total_group_requests,
+                SUM(pod_unfilled_requests) AS total_group_unfilled,
+                SUM(unfiltered_requests) AS total_raw_requests
+            FROM analytics.video_requests
             WHERE date_key BETWEEN '{date_from}' AND '{date_to}'
             GROUP BY tag_id, date_key
         ),
-        aggregated_impressions AS (
+        aggregated_deliveries AS (
             SELECT 
                 tag_id,
                 date_key,
-                SUM(num_unfiltered_impressions) AS total_num_unfiltered_impressions
-            FROM advertising.granular_rams_video_ad_impressions
+                SUM(unfiltered_deliveries) AS total_raw_deliveries
+            FROM analytics.video_deliveries
             WHERE date_key BETWEEN '{date_from}' AND '{date_to}'
             GROUP BY tag_id, date_key
         )
@@ -495,27 +495,27 @@ def fetch_query2_with_timeout_fallback(date_from, date_to, publisher_id):
             t.tag_id,
             t.name AS tag_name,
             r.date_key,
-            r.total_pod_based_ad_requests,
-            r.total_pod_unfilled_ad_requests,
-            r.total_num_unfiltered_ad_requests,
-            i.total_num_unfiltered_impressions,
+            r.total_group_requests,
+            r.total_group_unfilled,
+            r.total_raw_requests,
+            i.total_raw_deliveries,
             CASE 
-                WHEN r.total_pod_based_ad_requests > 0 
-                THEN ((r.total_pod_based_ad_requests - r.total_pod_unfilled_ad_requests) * 100.0 / r.total_pod_based_ad_requests)
+                WHEN r.total_group_requests > 0 
+                THEN ((r.total_group_requests - r.total_group_unfilled) * 100.0 / r.total_group_requests)
                 ELSE 0 
-            END AS fill_rate,
+            END AS completion_rate,
             CASE 
-                WHEN r.total_num_unfiltered_ad_requests > 0 
-                THEN (i.total_num_unfiltered_impressions * 100.0 / r.total_num_unfiltered_ad_requests)
+                WHEN r.total_raw_requests > 0 
+                THEN (i.total_raw_deliveries * 100.0 / r.total_raw_requests)
                 ELSE 0 
-            END AS impression_rate
+            END AS delivery_rate
         FROM 
-            ads.dim_rams_tags_history t
+            analytics.dim_tags_history t
         JOIN 
             aggregated_requests r
             ON t.tag_id = r.tag_id AND t.date_key = r.date_key
         JOIN 
-            aggregated_impressions i
+            aggregated_deliveries i
             ON t.tag_id = i.tag_id AND t.date_key = i.date_key
         WHERE 
             t.publisher_id = '{publisher_id}'
@@ -646,29 +646,29 @@ def fetch_all_seat_ids_bulk(date_from, date_to):
         t.name AS tag_name,
         m.seat_id,
         m.tag_id,
-        SUM(m.ad_query_requests) AS total_ad_query_requests,
-        SUM(m.ad_query_responses) AS total_ad_query_responses,
-        SUM(m.ad_slot_requests) AS total_ad_slot_requests,
-        SUM(m.ad_slot_responses) AS total_ad_slot_responses,
-        SUM(m.ad_creative_fetches) AS total_ad_creative_fetches,
-        SUM(m.ad_creative_responses) AS total_ad_creative_responses,
+        SUM(m.query_requests) AS total_type_a_requests,
+        SUM(m.query_responses) AS total_type_a_responses,
+        SUM(m.slot_requests) AS total_type_b_requests,
+        SUM(m.slot_responses) AS total_type_b_responses,
+        SUM(m.creative_fetches) AS total_type_c_fetches,
+        SUM(m.creative_responses) AS total_type_c_responses,
         CASE 
-            WHEN SUM(m.ad_slot_requests) > 0 
-            THEN (SUM(m.num_impressions) * 100.0 / SUM(m.ad_slot_requests))
+            WHEN SUM(m.slot_requests) > 0 
+            THEN (SUM(m.deliveries) * 100.0 / SUM(m.slot_requests))
             ELSE 0 
-        END AS fill_rate,
+        END AS completion_rate,
         CASE 
-            WHEN SUM(m.ad_creative_responses) > 0 
-            THEN (SUM(m.num_impressions) * 100.0 / SUM(m.ad_creative_responses))
+            WHEN SUM(m.creative_responses) > 0 
+            THEN (SUM(m.deliveries) * 100.0 / SUM(m.creative_responses))
             ELSE 0 
-        END AS avg_render_rate,
-        SUM(m.num_impressions) AS total_impressions,
+        END AS avg_success_rate,
+        SUM(m.deliveries) AS total_deliveries,
         m.date_key
-    FROM advertising.agg_raps_rams_metrics_daily_v2 m
-    LEFT JOIN ads.dim_rams_tags_history t ON m.tag_id = t.tag_id AND t.date_key = m.date_key
+    FROM analytics.agg_metrics_daily m
+    LEFT JOIN analytics.dim_tags_history t ON m.tag_id = t.tag_id AND t.date_key = m.date_key
     WHERE m.date_key BETWEEN '{date_from}' AND '{date_to}' 
       AND m.seat_id IN ('{seat_id_list}')
-      AND m.date_id_est IS NOT NULL
+      AND m.date_id IS NOT NULL
     GROUP BY 
         t.name, m.seat_id, m.tag_id, m.date_key
     ORDER BY m.seat_id, m.date_key DESC
@@ -729,29 +729,29 @@ sql_test = """
         t.name AS tag_name,
         m.seat_id,
         m.tag_id,
-        SUM(m.ad_query_requests) AS total_ad_query_requests,
-        SUM(m.ad_query_responses) AS total_ad_query_responses,
-        SUM(m.ad_slot_requests) AS total_ad_slot_requests,
-        SUM(m.ad_slot_responses) AS total_ad_slot_responses,
-        SUM(m.ad_creative_fetches) AS total_ad_creative_fetches,
-        SUM(m.ad_creative_responses) AS total_ad_creative_responses,
+        SUM(m.query_requests) AS total_type_a_requests,
+        SUM(m.query_responses) AS total_type_a_responses,
+        SUM(m.slot_requests) AS total_type_b_requests,
+        SUM(m.slot_responses) AS total_type_b_responses,
+        SUM(m.creative_fetches) AS total_type_c_fetches,
+        SUM(m.creative_responses) AS total_type_c_responses,
         CASE 
-            WHEN SUM(m.ad_slot_requests) > 0 
-            THEN (SUM(m.num_impressions) * 100.0 / SUM(m.ad_slot_requests))
+            WHEN SUM(m.slot_requests) > 0 
+            THEN (SUM(m.deliveries) * 100.0 / SUM(m.slot_requests))
             ELSE 0 
-        END AS fill_rate,
+        END AS completion_rate,
         CASE 
-            WHEN SUM(m.ad_creative_responses) > 0 
-            THEN (SUM(m.num_impressions) * 100.0 / SUM(m.ad_creative_responses))
+            WHEN SUM(m.creative_responses) > 0 
+            THEN (SUM(m.deliveries) * 100.0 / SUM(m.creative_responses))
             ELSE 0 
-        END AS avg_render_rate,
-        SUM(m.num_impressions) AS total_impressions,
+        END AS avg_success_rate,
+        SUM(m.deliveries) AS total_deliveries,
         m.date_key
-    FROM advertising.agg_raps_rams_metrics_daily_v2 m
-    LEFT JOIN ads.dim_rams_tags_history t ON m.tag_id = t.tag_id AND t.date_key = m.date_key
+    FROM analytics.agg_metrics_daily m
+    LEFT JOIN analytics.dim_tags_history t ON m.tag_id = t.tag_id AND t.date_key = m.date_key
     WHERE m.date_key = 'YESTERDAY_DATE' 
       AND m.seat_id IN ('SEAT_ID_LIST')
-      AND m.date_id_est IS NOT NULL
+      AND m.date_id IS NOT NULL
     GROUP BY 
         t.name, m.seat_id, m.tag_id, m.date_key
     ORDER BY m.seat_id, m.date_key DESC
@@ -781,7 +781,7 @@ def fetch_from_superset_api_test(sql_test):
     payload = {
         "database_id": SUPERSET_DB_ID,
         "sql": sql_test,
-        "schema": "advertising"
+        "schema": "analytics"
     }
     
     try:
@@ -804,7 +804,7 @@ def fetch_from_superset_api_test(sql_test):
         except Exception as e:
             print(f"❌ Error parsing JSON: {e}")
         
-        # Parse and print seat_id and impressions
+        # Parse and print seat_id and deliveries
         if response.status_code == 200:
             try:
                 data = response.json()
@@ -814,22 +814,22 @@ def fetch_from_superset_api_test(sql_test):
                     # Nested dictionary with 'data' key
                     rows = data['data']
                     if isinstance(rows, list):
-                        print(f"\n📊 All Data (Seat ID, Tag Name, Impressions):")
+                        print(f"\n📊 All Data (Seat ID, Tag Name, Deliveries):")
                         for i, row in enumerate(rows):
                             seat_id = row.get('seat_id', 'N/A')
                             tag_name = row.get('tag_name', 'N/A')
-                            impressions = row.get('total_impressions', 'N/A')
-                            print(f"  {i+1}. Seat ID: {seat_id}, Tag: {tag_name}, Impressions: {impressions}")
+                            deliveries = row.get('total_deliveries', 'N/A')
+                            print(f"  {i+1}. Seat ID: {seat_id}, Tag: {tag_name}, Deliveries: {deliveries}")
                     else:
                         print(f"❌ 'data' is not a list: {type(rows)}")
                 elif isinstance(data, list):
                     # Direct list of dictionaries
                     rows = data
-                    print(f"\n📊 Seat ID and Impressions (showing first 5):")
+                    print(f"\n📊 Seat ID and Deliveries (showing first 5):")
                     for i, row in enumerate(rows[:5]):  # Only show first 5
                         seat_id = row.get('seat_id', 'N/A')
-                        impressions = row.get('total_impressions', 'N/A')
-                        print(f"  {i+1}. Seat ID: {seat_id}, Impressions: {impressions}")
+                        deliveries = row.get('total_deliveries', 'N/A')
+                        print(f"  {i+1}. Seat ID: {seat_id}, Deliveries: {deliveries}")
                     if len(rows) > 5:
                         print(f"  ... and {len(rows) - 5} more rows")
                 else:
@@ -904,29 +904,29 @@ def fetch_missing_yesterday_data():
         t.name AS tag_name,
         m.seat_id,
         m.tag_id,
-        SUM(m.ad_query_requests) AS total_ad_query_requests,
-        SUM(m.ad_query_responses) AS total_ad_query_responses,
-        SUM(m.ad_slot_requests) AS total_ad_slot_requests,
-        SUM(m.ad_slot_responses) AS total_ad_slot_responses,
-        SUM(m.ad_creative_fetches) AS total_ad_creative_fetches,
-        SUM(m.ad_creative_responses) AS total_ad_creative_responses,
+        SUM(m.query_requests) AS total_type_a_requests,
+        SUM(m.query_responses) AS total_type_a_responses,
+        SUM(m.slot_requests) AS total_type_b_requests,
+        SUM(m.slot_responses) AS total_type_b_responses,
+        SUM(m.creative_fetches) AS total_type_c_fetches,
+        SUM(m.creative_responses) AS total_type_c_responses,
         CASE 
-            WHEN SUM(m.ad_slot_requests) > 0 
-            THEN (SUM(m.num_impressions) * 100.0 / SUM(m.ad_slot_requests))
+            WHEN SUM(m.slot_requests) > 0 
+            THEN (SUM(m.deliveries) * 100.0 / SUM(m.slot_requests))
             ELSE 0 
-        END AS fill_rate,
+        END AS completion_rate,
         CASE 
-            WHEN SUM(m.ad_creative_responses) > 0 
-            THEN (SUM(m.num_impressions) * 100.0 / SUM(m.ad_creative_responses))
+            WHEN SUM(m.creative_responses) > 0 
+            THEN (SUM(m.deliveries) * 100.0 / SUM(m.creative_responses))
             ELSE 0 
-        END AS avg_render_rate,
-        SUM(m.num_impressions) AS total_impressions,
+        END AS avg_success_rate,
+        SUM(m.deliveries) AS total_deliveries,
         m.date_key
-    FROM advertising.agg_raps_rams_metrics_daily_v2 m
-    LEFT JOIN ads.dim_rams_tags_history t ON m.tag_id = t.tag_id AND t.date_key = m.date_key
+    FROM analytics.agg_metrics_daily m
+    LEFT JOIN analytics.dim_tags_history t ON m.tag_id = t.tag_id AND t.date_key = m.date_key
     WHERE m.date_key = '{yesterday}' 
       AND m.seat_id IN ('{seat_id_list}')
-      AND m.date_id_est IS NOT NULL
+      AND m.date_id IS NOT NULL
     GROUP BY 
         t.name, m.seat_id, m.tag_id, m.date_key
     ORDER BY m.seat_id, m.date_key DESC
@@ -935,7 +935,7 @@ def fetch_missing_yesterday_data():
     payload = {
         "database_id": SUPERSET_DB_ID,
         "sql": sql,
-        "schema": "advertising"
+        "schema": "analytics"
     }
     
     try:
@@ -975,9 +975,9 @@ def store_yesterday_data_to_cache(api_data):
         return
     
     # Define the expected columns based on the SQL query
-    columns = ['tag_name', 'seat_id', 'tag_id', 'total_ad_query_requests', 'total_ad_query_responses', 
-               'total_ad_slot_requests', 'total_ad_slot_responses', 'total_ad_creative_fetches', 
-               'total_ad_creative_responses', 'fill_rate', 'avg_render_rate', 'total_impressions', 'date_key']
+    columns = ['tag_name', 'seat_id', 'tag_id', 'total_type_a_requests', 'total_type_a_responses', 
+               'total_type_b_requests', 'total_type_b_responses', 'total_type_c_fetches', 
+               'total_type_c_responses', 'completion_rate', 'avg_success_rate', 'total_deliveries', 'date_key']
     
     # Group data by seat_id (data is in dictionary format)
     seat_id_groups = {}
@@ -1069,14 +1069,14 @@ def check_available_dates():
         MAX(date_key) as latest_date,
         COUNT(DISTINCT date_key) as total_days,
         COUNT(*) as total_rows
-    FROM advertising.agg_raps_rams_metrics_daily_v2 
-    WHERE date_id_est IS NOT NULL
+    FROM analytics.agg_metrics_daily 
+    WHERE date_id IS NOT NULL
     """
     
     payload = {
         "database_id": SUPERSET_DB_ID,
         "sql": sql,
-        "schema": "advertising"
+        "schema": "analytics"
     }
     
     try:
@@ -1120,9 +1120,9 @@ def check_recent_dates():
         date_key,
         COUNT(*) as row_count,
         COUNT(DISTINCT seat_id) as unique_seats
-    FROM advertising.agg_raps_rams_metrics_daily_v2 
-    WHERE date_id_est IS NOT NULL
-      AND date_key >= '2025-08-10'
+    FROM analytics.agg_metrics_daily 
+    WHERE date_id IS NOT NULL
+      AND date_key >= '2025-01-01'
     GROUP BY date_key
     ORDER BY date_key DESC
     """
@@ -1130,7 +1130,7 @@ def check_recent_dates():
     payload = {
         "database_id": SUPERSET_DB_ID,
         "sql": sql,
-        "schema": "advertising"
+        "schema": "analytics"
     }
     
     try:

@@ -257,12 +257,12 @@
                                     </div>
                                 </div>
                                 <div class="stat-card">
-                                    <h4>Total Impressions</h4>
-                                    <div class="value">{{ "{:,}".format(analysis.total_impressions) }}</div>
+                                    <h4>Total Deliveries</h4>
+                                    <div class="value">{{ "{:,}".format(analysis.total_deliveries) }}</div>
                                 </div>
                                 <div class="stat-card">
-                                    <h4>Mapped Impressions</h4>
-                                    <div class="value">{{ "{:,}".format(analysis.mapped_impressions) }}</div>
+                                    <h4>Mapped Deliveries</h4>
+                                    <div class="value">{{ "{:,}".format(analysis.mapped_deliveries) }}</div>
                                 </div>
                             </div>
                             
@@ -271,7 +271,7 @@
                                     <h3>🌍 Country Breakdown</h3>
                                     {% for country, stats in analysis.country_breakdown.items() %}
                                         <div class="country-item">
-                                            <h4>{{ country }} - {{ "{:,}".format(stats.total_impressions) }} impressions</h4>
+                                            <h4>{{ country }} - {{ "{:,}".format(stats.total_deliveries) }} deliveries</h4>
                                             <div class="tag-list">
                                                 {% for tag in stats.tags %}
                                                     <span class="tag-badge">{{ tag }}</span>

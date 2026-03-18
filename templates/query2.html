@@ -242,7 +242,7 @@
             <form method="POST">
                 <div class="form-group">
                     <label for="date_from">Date From:</label>
-                    <input type="date" name="date_from" value="{{ date_from or '2025-07-01' }}" required>
+                    <input type="date" name="date_from" value="{{ date_from or '2025-01-01' }}" required>
                 </div>
                 <div class="form-group">
                     <label for="date_to">Date To:</label>
@@ -261,7 +261,7 @@
             <form method="POST">
                 <div class="form-group">
                     <label for="date_from">Date From:</label>
-                    <input type="date" name="date_from" value="{{ date_from or '2025-07-01' }}" required>
+                    <input type="date" name="date_from" value="{{ date_from or '2025-01-01' }}" required>
                 </div>
                 <div class="form-group">
                     <label for="date_to">Date To:</label>
@@ -272,7 +272,7 @@
                     <input type="text" 
                            name="tag_search" 
                            value="{{ tag_search or '' }}" 
-                           placeholder="e.g., 'XUMO', 'inventory', '19977'..."
+                           placeholder="e.g., 'Acme', 'inventory', '10001'..."
                            autocomplete="off">
                 </div>
                 <div class="form-group">
@@ -348,7 +348,7 @@
                             <th>📅 Date</th>
                         {% endif %}
                         {% for col in columns if col != 'date_key' and col != 'publisher_id' %}
-                            <th {% if col == "total_num_unfiltered_impressions" %}style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);"{% endif %}>
+                            <th {% if col == "total_raw_deliveries" %}style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);"{% endif %}>
                                 {% if col == 'tag_name' %}🏷️ 
                                 {% elif col == 'tag_id' %}🔖 
                                 {% elif 'total' in col %}📈 
@@ -370,7 +370,7 @@
                         {% for val in row %}
                             {% set col = columns[loop.index0] %}
                             {% if col != "date_key" and col != "publisher_id" %}
-                                {% if col == "total_num_unfiltered_impressions" %}
+                                {% if col == "total_raw_deliveries" %}
                                     <td class="number-cell" style="background: #fff3cd; font-weight: bold; color: #856404;">
                                         {{ "{:,}".format(val|int) if val is not none and val|string|length > 0 else "" }}
                                     </td>
