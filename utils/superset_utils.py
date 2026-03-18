@@ -16,7 +16,7 @@ from utils.cache_utils import (
 )
 
 # --- Superset API Config ---
-SUPERSET_EXECUTE_URL = "https://superset.de.gcp.rokulabs.net/api/v1/sqllab/execute/"
+SUPERSET_EXECUTE_URL = "Placeholder"
 SUPERSET_HEADERS = {
     "Accept": "application/json",
     "Content-Type": "application/json",
